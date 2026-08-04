@@ -10,8 +10,8 @@ ACCENT = 0x3A6EA5
 TEXT = 0xF0F0F0
 MUTED = 0x8890A0
 
-TAB_H = 40
-TITLE_Y = 52
+TAB_H = 28
+TITLE_Y = 34
 
 
 def make_screen():
@@ -33,6 +33,8 @@ def make_tab_bar(parent, align_bottom=False):
     bar.set_style_border_width(0, 0)
     bar.set_style_radius(0, 0)
     bar.set_style_pad_all(0, 0)
+    bar.set_style_pad_row(0, 0)
+    bar.set_style_pad_column(0, 0)
     bar.set_flex_flow(lv.FLEX_FLOW.ROW)
     bar.set_flex_align(
         lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER
@@ -53,6 +55,7 @@ def make_tab_btn(bar, text, cb, width_pct=None, active=False):
             pass
     btn.set_style_radius(0, 0)
     btn.set_style_shadow_width(0, 0)
+    btn.set_style_pad_all(0, 0)
     btn.set_style_bg_color(lv.color_hex(ACCENT if active else TAB_IDLE), 0)
     # Avoid click-focus so returning from a child activity does not
     # scroll_to_view a focused control inside a scrollable parent.
@@ -88,7 +91,7 @@ def make_title(parent, y=TITLE_Y, font_size=16):
     return title
 
 
-def make_subtitle(parent, y=72):
+def make_subtitle(parent, y=54):
     lbl = lv.label(parent)
     lbl.set_style_text_color(lv.color_hex(MUTED), 0)
     lbl.set_long_mode(lv.label.LONG_MODE.WRAP)
@@ -154,5 +157,9 @@ def make_row_btn(parent, text, cb, height=48):
     lbl.set_text(text)
     lbl.set_long_mode(lv.label.LONG_MODE.WRAP)
     lbl.set_width(lv.pct(90))
+    try:
+        lbl.set_style_text_font(lv.font_montserrat_16, 0)
+    except Exception:
+        pass
     lbl.center()
     return btn, lbl

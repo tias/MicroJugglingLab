@@ -32,7 +32,7 @@ class MainMenu(Activity):
 
         self._title = U.make_title(screen)
 
-        body = U.make_panel(screen, height_pct=68, scrollable=False)
+        body = U.make_panel(screen, height_pct=68, scrollable=True)
         self._section_lbls = []
         for section in SECTIONS:
             btn, lbl = U.make_row_btn(
