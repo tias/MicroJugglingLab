@@ -2,7 +2,7 @@
 
 Animated **How to Juggle** lessons for [MicroPythonOS](https://micropythonos.com/) on the Fri3d Camp 2026 badge. Lesson order and siteswaps follow [Juggling Lab](https://jugglinglab.org/)’s `basic_how to.jml` beginner list. This is a small MicroPython app with a lightweight siteswap animator — not a port of the full Juggling Lab engine.
 
-Upstream Juggling Lab (Kotlin) lives in `jugglinglab/` for reference only.
+Upstream Juggling Lab (Kotlin) lives in `jugglinglab/` for reference only. Desktop OS checkout lives in `MicroPythonOS/` (gitignored).
 
 ## App
 
@@ -20,6 +20,42 @@ org.jugglinglab.howto/
 - Play / pause, ± speed, back
 - Designed for ~320×240 touch UI
 
+## Run locally (desktop)
+
+No badge required. From this repo root:
+
+```bash
+./run_desktop.sh
+```
+
+This uses the in-repo `MicroPythonOS/` tree, symlinks `org.jugglinglab.howto/` into its apps folder, and launches the app in an SDL window.
+
+```bash
+./run_desktop.sh --launcher          # OS launcher only
+MPOS_ROOT=/other/MicroPythonOS ./run_desktop.sh   # override path
+```
+
+Edit files under `org.jugglinglab.howto/`, then run `./run_desktop.sh` again to reload.
+
+### One-time setup of `MicroPythonOS/`
+
+```bash
+git clone --recurse-submodules --depth 1 --shallow-submodules \
+  https://github.com/MicroPythonOS/MicroPythonOS.git MicroPythonOS
+
+# Download desktop binary from
+#   https://github.com/MicroPythonOS/MicroPythonOS/releases
+# Linux x64 example:
+mkdir -p MicroPythonOS/lvgl_micropython/build
+cp ~/Downloads/MicroPythonOS_x64_linux_*.elf \
+  MicroPythonOS/lvgl_micropython/build/lvgl_micropy_unix
+chmod +x MicroPythonOS/lvgl_micropython/build/lvgl_micropy_unix
+
+./run_desktop.sh
+```
+
+Docs: [Running on desktop](https://docs.micropythonos.com/os-development/running-on-desktop/).
+
 ## Install on the badge (`mpremote`)
 
 ```bash
@@ -29,34 +65,6 @@ mpremote connect /dev/ttyACM0 exec "from mpos import AppManager; AppManager.star
 ```
 
 Use your serial device if it is not `/dev/ttyACM0`. On Linux, your user usually needs to be in the `dialout` group.
-
-## Optional: test on desktop MicroPythonOS
-
-A desktop checkout is set up next to this project at `/home/tias/vanalles/MicroPythonOS` (v0.16.0 Linux binary + symlink to this app).
-
-```bash
-cd /home/tias/vanalles/MicroPythonOS
-./scripts/run_desktop.sh                          # launcher, then open Juggle How-To
-# or jump straight into the app:
-./scripts/run_desktop.sh org.jugglinglab.howto
-```
-
-Edit files under `mps_juggling_lab/org.jugglinglab.howto/`, then restart `run_desktop.sh` to reload. Layout is tuned for ~320×240; the desktop window may be larger.
-
-If you recreate the setup elsewhere:
-
-```bash
-git clone --recurse-submodules --depth 1 --shallow-submodules \
-  https://github.com/MicroPythonOS/MicroPythonOS.git
-# Download MicroPythonOS_x64_linux_*.elf from GitHub Releases into:
-#   lvgl_micropython/build/lvgl_micropy_unix  (chmod +x)
-ln -sfn /path/to/mps_juggling_lab/org.jugglinglab.howto \
-  MicroPythonOS/internal_filesystem/apps/org.jugglinglab.howto
-./scripts/run_desktop.sh
-```
-
-Docs: [Running on desktop](https://docs.micropythonos.com/os-development/running-on-desktop/).
-
 
 ## Bundle `.mpk` and publish on BadgeHub
 
