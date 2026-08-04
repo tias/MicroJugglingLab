@@ -1,17 +1,17 @@
 #!/bin/sh
-# Run Juggle How-To on desktop MicroPythonOS (no badge required).
+# Run MicroJugglingLab on desktop MicroPythonOS (no badge required).
 #
 # Expects MicroPythonOS/ inside this repo (or set MPOS_ROOT).
 #
 # Usage:
-#   ./run_desktop.sh                 # start org.jugglinglab.howto
+#   ./run_desktop.sh                 # start org.microjugglinglab.solo
 #   ./run_desktop.sh --launcher      # start full OS launcher only
 #   MPOS_ROOT=/other/path ./run_desktop.sh
 
 set -e
 
 ROOT="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
-APP="org.jugglinglab.howto"
+APP="org.microjugglinglab.solo"
 APP_DIR="$ROOT/$APP"
 
 # Prefer in-repo MicroPythonOS/; allow MPOS_ROOT override
@@ -60,7 +60,7 @@ echo "MPOS_ROOT=$MPOS_ROOT"
 
 if [ "${1:-}" = "--launcher" ]; then
   shift
-  echo "Starting MicroPythonOS launcher (open Juggle How-To from the menu)."
+  echo "Starting MicroPythonOS launcher (open MicroJugglingLab from the menu)."
   exec bash "$RUNNER" "$@"
 fi
 

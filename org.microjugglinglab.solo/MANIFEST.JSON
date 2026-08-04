@@ -1,9 +1,9 @@
 {
-  "name": "Juggle How-To",
+  "name": "MicroJugglingLab",
   "publisher": "Juggling Lab community",
   "short_description": "Learn to juggle with animated lessons (NL/FR/EN)",
-  "long_description": "Step-by-step How to Juggle animations for the Fri3d Badge 2026. Inspired by Juggling Lab's beginner curriculum: 3-cascade, 4-fountain, and 5-cascade drills with a live siteswap animator. UI in Dutch, French, and English.",
-  "fullname": "org.jugglinglab.howto",
+  "long_description": "Step-by-step juggling animations for the Fri3d Badge 2026. Inspired by Juggling Lab's beginner curriculum: 3-cascade, 4-fountain, and 5-cascade drills with a live siteswap animator. UI in Dutch, French, and English.",
+  "fullname": "org.microjugglinglab.solo",
   "version": "0.2.0",
   "categories": ["Education", "Games"],
   "activities": [

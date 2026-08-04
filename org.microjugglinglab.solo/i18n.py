@@ -13,8 +13,8 @@ LANG_LABELS = {"nl": "NL", "fr": "FR", "en": "EN"}
 DEFAULT_LANG = "en"
 
 _PREF_CANDIDATES = (
-    "apps/org.jugglinglab.howto/lang.json",
-    "/apps/org.jugglinglab.howto/lang.json",
+    "apps/org.microjugglinglab.solo/lang.json",
+    "/apps/org.microjugglinglab.solo/lang.json",
     "lang.json",
 )
 
@@ -22,9 +22,9 @@ _current = None
 
 STRINGS = {
     "app_title": {
-        "nl": "Leer jongleren",
-        "fr": "Apprendre a jongler",
-        "en": "How to Juggle",
+        "nl": "MicroJugglingLab",
+        "fr": "MicroJugglingLab",
+        "en": "MicroJugglingLab",
     },
     "tagline": {
         "nl": "Kies een taal en een lesreeks",

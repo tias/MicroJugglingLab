@@ -1,10 +1,10 @@
 #!/bin/sh
-# Build a MicroPythonOS .mpk for org.jugglinglab.howto (BadgeHub-ready).
+# Build a MicroPythonOS .mpk for org.microjugglinglab.solo (BadgeHub-ready).
 # See https://docs.micropythonos.com/apps/bundling-apps/
 
 set -e
-ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
-APP="org.jugglinglab.howto"
+ROOT="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+APP="org.microjugglinglab.solo"
 VERSION="$(python3 -c "import json; print(json.load(open('$ROOT/$APP/MANIFEST.JSON'))['version'])")"
 OUT_DIR="$ROOT/dist"
 OUT="$OUT_DIR/${APP}_${VERSION}.mpk"
