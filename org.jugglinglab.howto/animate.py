@@ -1,9 +1,20 @@
-# Animator activity — live siteswap view with shared app chrome.
+# Animator activity — JL-style ClassicAvatar stick figure + TossPath view.
 
 import lvgl as lv
 from mpos import Activity
 
-from engine import JuggleEngine, RIGHT, LEFT
+try:
+    import math
+except ImportError:
+    import math
+
+from engine import (
+    JuggleEngine,
+    RIGHT,
+    LEFT,
+    UPPER_ARM_LENGTH,
+    LOWER_ARM_LENGTH,
+)
 from i18n import get_lang, t
 import ui as U
 
@@ -16,6 +27,57 @@ BALL_COLORS = (
     0x40C0C0,
 )
 
+_FIGURE = 0xD8DCE8
+_HAND = 0xE8C080
+
+# JL Avatar.JUGGLE_PLANE_OFFSET — hands sit in front of the torso. Without this
+# depth term, 2D IK hits asin/tan singularities when the hand is under the
+# shoulder and the elbow jumps wildly (especially the right arm).
+_HAND_DEPTH_CM = 30.0
+
+
+def _elbow(sx, sy, hx, hy, upper_len, lower_len, scale):
+    """Two-bone IK matching JL Avatar.elbow (render space: +Y up, +Z depth)."""
+    depth = _HAND_DEPTH_CM * scale
+    # Screen (+y down) → render (+y up); hand has juggling-plane depth.
+    s = (sx, -sy, 0.0)
+    h = (hx, -hy, depth)
+    dx = h[0] - s[0]
+    dy = h[1] - s[1]
+    dz = h[2] - s[2]
+    D = math.sqrt(dx * dx + dy * dy + dz * dz)
+    U = upper_len
+    L = lower_len
+    if D < 1e-6:
+        return (sx, sy)
+    if D > U + L - 1e-6:
+        f = U / D
+        return (sx + (hx - sx) * f, sy + (hy - sy) * f)
+
+    uu_ll_dd = U * U + L * L - D * D
+    radicand = (4.0 * U * U * L * L - uu_ll_dd * uu_ll_dd) / (4.0 * D * D)
+    if radicand < 0.0:
+        radicand = 0.0
+    r = math.sqrt(radicand)
+    along = math.sqrt(max(0.0, U * U - r * r)) / D
+    # alpha from up-component (JL: asin(delta.y / D))
+    alpha = math.asin(max(-1.0, min(1.0, dy / D)))
+    # Keep tan(alpha) stable near vertical reaches
+    ca = math.cos(alpha)
+    if abs(ca) < 0.15:
+        ca = 0.15 if ca >= 0.0 else -0.15
+    ta = math.sin(alpha) / ca
+    adj = 1.0 + r * ta / (along * D)
+    # Clamp amplification so the elbow cannot flip across the torso
+    if adj > 2.5:
+        adj = 2.5
+    elif adj < -1.5:
+        adj = -1.5
+    ex = s[0] + along * dx * adj
+    ey_up = s[1] + along * dy - r * math.cos(alpha)
+    # discard depth for 2D draw
+    return (ex, -ey_up)
+
 
 class Animator(Activity):
     def __init__(self):
@@ -23,8 +85,6 @@ class Animator(Activity):
         self.engine = None
         self.timer = None
         self.ball_objs = []
-        self.arm_r = None
-        self.arm_l = None
         self.title_lbl = None
         self.pattern_lbl = None
         self.play_btn = None
@@ -47,7 +107,6 @@ class Animator(Activity):
 
         screen = U.make_screen()
 
-        # Top: Back | Pause | - | + (all controls in one strip)
         top = U.make_tab_bar(screen)
         U.make_tab_btn(
             top, t("back", self._lang), self._on_back, width_pct=26, active=True
@@ -58,7 +117,6 @@ class Animator(Activity):
         U.make_tab_btn(top, "-", self._on_slower, width_pct=19)
         U.make_tab_btn(top, "+", self._on_faster, width_pct=19)
 
-        # Compact title block under tabs (~40px used by bar)
         self.title_lbl = U.make_title(screen, y=44, font_size=14)
         self.title_lbl.set_text(title)
 
@@ -78,9 +136,7 @@ class Animator(Activity):
             tip_lbl.align(lv.ALIGN.TOP_MID, 0, 78)
             tip_h = 18
 
-        # Stage fills remaining height to the bottom of the 240px screen
         stage_top = 78 + tip_h + 4
-        # Assume ~240px display; leave 4px bottom pad
         stage = lv.obj(screen)
         stage.set_style_bg_color(lv.color_hex(U.PANEL), 0)
         stage.set_style_border_width(0, 0)
@@ -91,37 +147,41 @@ class Animator(Activity):
         stage.align(lv.ALIGN.TOP_MID, 0, stage_top)
         stage.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
+        def _mk_line():
+            ln = lv.line(stage)
+            ln.set_style_line_width(3, 0)
+            ln.set_style_line_color(lv.color_hex(_FIGURE), 0)
+            ln.set_style_line_rounded(True, 0)
+            return ln
+
+        # Torso: two diagonals forming a shoulder–waist quad silhouette
+        self.torso_l = _mk_line()
+        self.torso_r = _mk_line()
+        self.torso_top = _mk_line()
+        self.torso_bot = _mk_line()
+
         self.head_obj = lv.obj(stage)
         self.head_obj.set_size(18, 18)
         self.head_obj.set_style_radius(9, 0)
-        self.head_obj.set_style_bg_color(lv.color_hex(0xD8DCE8), 0)
+        self.head_obj.set_style_bg_color(lv.color_hex(_FIGURE), 0)
         self.head_obj.set_style_border_width(0, 0)
 
-        self.body_line = lv.line(stage)
-        self.body_line.set_style_line_width(3, 0)
-        self.body_line.set_style_line_color(lv.color_hex(0xD8DCE8), 0)
-        self.body_line.set_style_line_rounded(True, 0)
-
-        self.arm_r = lv.line(stage)
-        self.arm_r.set_style_line_width(3, 0)
-        self.arm_r.set_style_line_color(lv.color_hex(0xD8DCE8), 0)
-        self.arm_r.set_style_line_rounded(True, 0)
-
-        self.arm_l = lv.line(stage)
-        self.arm_l.set_style_line_width(3, 0)
-        self.arm_l.set_style_line_color(lv.color_hex(0xD8DCE8), 0)
-        self.arm_l.set_style_line_rounded(True, 0)
+        # Two-bone arms
+        self.arm_ru = _mk_line()
+        self.arm_rl = _mk_line()
+        self.arm_lu = _mk_line()
+        self.arm_ll = _mk_line()
 
         self.hand_r = lv.obj(stage)
         self.hand_r.set_size(10, 10)
         self.hand_r.set_style_radius(5, 0)
-        self.hand_r.set_style_bg_color(lv.color_hex(0xE8C080), 0)
+        self.hand_r.set_style_bg_color(lv.color_hex(_HAND), 0)
         self.hand_r.set_style_border_width(0, 0)
 
         self.hand_l = lv.obj(stage)
         self.hand_l.set_size(10, 10)
         self.hand_l.set_style_radius(5, 0)
-        self.hand_l.set_style_bg_color(lv.color_hex(0xE8C080), 0)
+        self.hand_l.set_style_bg_color(lv.color_hex(_HAND), 0)
         self.hand_l.set_style_border_width(0, 0)
 
         self.stage = stage
@@ -146,7 +206,6 @@ class Animator(Activity):
         self.engine = None
 
     def _ensure_engine(self):
-        # Fit stage to remaining screen height if display is not exactly 240.
         try:
             scr_h = self.stage.get_parent().get_height()
             if scr_h > 80:
@@ -229,14 +288,32 @@ class Animator(Activity):
     def _draw_state(self, st):
         hx_r, hy_r = st["hands"][RIGHT]
         hx_l, hy_l = st["hands"][LEFT]
-        bx, by = st["body"]
+        sr = st["shoulders"][RIGHT]
+        sl = st["shoulders"][LEFT]
+        wr = st["waist"][RIGHT]
+        wl = st["waist"][LEFT]
         hx, hy = st["head"]
+        scale = st.get("scale") or 1.0
 
+        # Head
         self.head_obj.set_pos(int(hx - 9), int(hy - 9))
-        self._set_line(self.body_line, hx, hy + 9, bx, by + 20)
-        shoulder_y = by - 5
-        self._set_line(self.arm_r, bx + 6, shoulder_y, hx_r, hy_r)
-        self._set_line(self.arm_l, bx - 6, shoulder_y, hx_l, hy_l)
+
+        # Torso quad: L-shoulder → R-shoulder → R-waist → L-waist
+        self._set_line(self.torso_top, sl[0], sl[1], sr[0], sr[1])
+        self._set_line(self.torso_r, sr[0], sr[1], wr[0], wr[1])
+        self._set_line(self.torso_bot, wr[0], wr[1], wl[0], wl[1])
+        self._set_line(self.torso_l, wl[0], wl[1], sl[0], sl[1])
+
+        u_len = UPPER_ARM_LENGTH * scale
+        l_len = LOWER_ARM_LENGTH * scale
+        er = _elbow(sr[0], sr[1], hx_r, hy_r, u_len, l_len, scale)
+        el = _elbow(sl[0], sl[1], hx_l, hy_l, u_len, l_len, scale)
+
+        self._set_line(self.arm_ru, sr[0], sr[1], er[0], er[1])
+        self._set_line(self.arm_rl, er[0], er[1], hx_r, hy_r)
+        self._set_line(self.arm_lu, sl[0], sl[1], el[0], el[1])
+        self._set_line(self.arm_ll, el[0], el[1], hx_l, hy_l)
+
         self.hand_r.set_pos(int(hx_r - 5), int(hy_r - 5))
         self.hand_l.set_pos(int(hx_l - 5), int(hy_l - 5))
 
