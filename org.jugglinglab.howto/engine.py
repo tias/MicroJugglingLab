@@ -140,7 +140,7 @@ _SECS_AIRTIME_MAX = 2.6
 # Badge stage (~320×240): separate peak budgets for 4 vs 5+.
 # Cascade-3 @ 3bps ~50cm boosted; 4s a bit above; 5s fill to the top of the frame
 # at cascade figure scale (z_max=85).
-_SCREEN_PEAK_Z_4 = 70.0
+_SCREEN_PEAK_Z_4 = 78.0
 _LAYOUT_Z_MAX = 85.0
 _SCREEN_TOP_MARGIN_PX = 6.0
 # Hermite carry: match softcatch/throw tip speeds enough to dip, not overshoot.
@@ -591,16 +591,25 @@ class JuggleEngine:
         return hk + bk
 
     def _all_balls_present(self, t_loop):
-        hands = {
-            RIGHT: self._hand_xz(RIGHT, t_loop),
-            LEFT: self._hand_xz(LEFT, t_loop),
-        }
         balls = {}
         for f in self.flights:
             b = f["ball"]
             if f["t0"] <= t_loop <= f["hold_until"]:
                 balls[b] = True
         return len(balls) >= self.num_balls
+
+    def _hands_ready(self, t_loop):
+        """True if every hand that has motion is on a Hermite seg (not pre-seg rest)."""
+        for h in (RIGHT, LEFT):
+            segs = self.hand_segs.get(h) or []
+            if not segs:
+                continue  # never moves — resting is correct
+            if not any(s["t0"] <= t_loop <= s["t1"] for s in segs):
+                return False
+        return True
+
+    def _steady_at(self, t_loop):
+        return self._all_balls_present(t_loop) and self._hands_ready(t_loop)
 
     def _measure_seamless_loop(self):
         """Find warmup_ms + loop_ms so labeled state repeats (no teleport wrap)."""
@@ -610,26 +619,30 @@ class JuggleEngine:
             self.loop_ms = self.beat_ms
             return
 
-        # Warmup: first time every ball is in play.
-        warmup = 0.0
         max_t = 0.0
         for f in self.flights:
             if f["hold_until"] > max_t:
                 max_t = f["hold_until"]
-        probe = 0.0
+        for h in (RIGHT, LEFT):
+            for s in self.hand_segs.get(h) or []:
+                if s["t1"] > max_t:
+                    max_t = s["t1"]
+
+        # Warmup: past startup so idle hands aren't still at pre-motion rest.
+        warmup = 0.0
         found_warm = False
+        probe = 0.0
         while probe <= max_t:
-            if self._all_balls_present(probe):
+            if self._steady_at(probe):
                 warmup = probe
                 found_warm = True
                 break
             probe += step * 0.25
         if not found_warm:
-            warmup = step * float(self.num_balls)
+            warmup = step * float(max(1, self.num_balls))
 
-        # Need warmup + loop well inside the schedule (leave ~2 periods of tail).
         period = max(1, len(self.beats))
-        max_n = max(2 * self.num_balls * period, 4 * period, 12)
+        max_n = max(2 * self.num_balls * period, 4 * period, 24)
         margin = step * float(2 * period + 2)
         loop_ms = step * float(period)
         found = False
@@ -637,9 +650,13 @@ class JuggleEngine:
             cand = step * float(n)
             if warmup + cand + margin > max_t:
                 break
+            # Must match at the wrap point itself (d=0), not only mid-loop probes.
             ok = True
-            for i in range(5):
-                tl = warmup + (0.15 + 0.17 * i) * cand
+            for frac in (0.0, 0.15, 0.35, 0.55, 0.75, 0.92):
+                tl = warmup + frac * cand
+                if not self._steady_at(tl) or not self._steady_at(tl + cand):
+                    ok = False
+                    break
                 if self._state_key(tl) != self._state_key(tl + cand):
                     ok = False
                     break
@@ -648,7 +665,6 @@ class JuggleEngine:
                 found = True
                 break
         if not found:
-            # Fallback: 2*balls*period (odd async hand return) or 2*period.
             n = 2 * max(1, self.num_balls) * period
             loop_ms = step * float(n)
             if warmup + loop_ms + margin > max_t:

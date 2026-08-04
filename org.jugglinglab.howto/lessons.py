@@ -90,7 +90,7 @@ SECTIONS = [
                     "en": "Slower 3-Cascade",
                 },
                 "pattern": "3",
-                "bps": 2.0,
+                "bps": 2.2,
                 "tip": {
                     "nl": "Zelfde patroon, trager — let op de bogen.",
                     "fr": "Meme figure, plus lent — regarde les arcs.",
@@ -115,7 +115,7 @@ SECTIONS = [
                     "en": "2 in One Hand",
                 },
                 "pattern": "40",
-                "bps": 4.1,
+                "bps": 3.8,
                 "tip": {
                     "nl": "Twee ballen alleen in de rechterhand (kolommen).",
                     "fr": "Deux balles dans la main droite seulement (colonnes).",
@@ -129,7 +129,7 @@ SECTIONS = [
                     "en": "4-Synchronous Fountain",
                 },
                 "pattern": "(4,4)",
-                "bps": 4.1,
+                "bps": 3.8,
                 "tip": {
                     "nl": "Beide handen gooien samen; ballen blijven aan hun kant.",
                     "fr": "Les deux mains lancent ensemble; les balles restent de leur cote.",
@@ -143,7 +143,7 @@ SECTIONS = [
                     "en": "4-Fountain",
                 },
                 "pattern": "4",
-                "bps": 4.1,
+                "bps": 3.8,
                 "tip": {
                     "nl": "Async fontein: even worpen, kolommen in dezelfde hand.",
                     "fr": "Fontaine async: lancers pairs, colonnes dans la meme main.",
