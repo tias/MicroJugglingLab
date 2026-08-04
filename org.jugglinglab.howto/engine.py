@@ -403,9 +403,10 @@ class JuggleEngine:
         self.hand_segs = {RIGHT: [], LEFT: []}
         self.loop_ms = self.beat_ms
         self.warmup_ms = 0.0
+        self.playback_rate = 1.0
+        self._sim_at_anchor = 0.0
         self._t0 = _now_ms()
         self._paused_at = None
-        self._pause_accum = 0
         self.playing = True
         self._layout()
         self._build_schedule()
@@ -459,22 +460,33 @@ class JuggleEngine:
         self.beat_ms = 1000.0 / self.bps
         self._layout()
         self._build_schedule()
+        self._sim_at_anchor = 0.0
         self._t0 = _now_ms()
-        self._pause_accum = 0
         self._paused_at = None
         if not self.playing:
             self._paused_at = self._t0
 
+    def set_playback_rate(self, rate):
+        """Scale animation speed only — does not change bps or throw height."""
+        rate = max(0.25, min(2.0, float(rate)))
+        self._sim_at_anchor = self.elapsed_ms()
+        self._t0 = _now_ms()
+        if self._paused_at is not None:
+            self._paused_at = self._t0
+        self.playback_rate = rate
+
     def elapsed_ms(self):
         now = _now_ms()
         if self._paused_at is not None:
-            return self._pause_accum + _diff_ms(self._t0, self._paused_at)
-        return self._pause_accum + _diff_ms(self._t0, now)
+            wall = _diff_ms(self._t0, self._paused_at)
+        else:
+            wall = _diff_ms(self._t0, now)
+        return self._sim_at_anchor + wall * self.playback_rate
 
     def play(self):
         if self.playing:
             return
-        self._pause_accum = self.elapsed_ms()
+        self._sim_at_anchor = self.elapsed_ms()
         self._t0 = _now_ms()
         self._paused_at = None
         self.playing = True
@@ -482,7 +494,9 @@ class JuggleEngine:
     def pause(self):
         if not self.playing:
             return
-        self._paused_at = _now_ms()
+        self._sim_at_anchor = self.elapsed_ms()
+        self._t0 = _now_ms()
+        self._paused_at = self._t0
         self.playing = False
 
     def toggle(self):

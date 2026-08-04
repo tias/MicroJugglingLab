@@ -148,7 +148,7 @@ class Animator(Activity):
         self.title_lbl.set_text(title)
 
         self.pattern_lbl = U.make_side_label(left, muted=True, font_size=14)
-        self.pattern_lbl.set_text("%s  |  %.1f bps" % (pattern, bps))
+        self.pattern_lbl.set_text("%s  |  1.0x" % pattern)
 
         if tip:
             tip_lbl = U.make_side_label(left, muted=True, font_size=14)
@@ -362,13 +362,15 @@ class Animator(Activity):
     def _on_slower(self):
         if self.engine is None:
             return
-        self.engine.set_bps(self.engine.bps - 0.5)
-        self._bps = self.engine.bps
-        self.pattern_lbl.set_text("%s  |  %.1f bps" % (self._pattern, self._bps))
+        self.engine.set_playback_rate(self.engine.playback_rate - 0.25)
+        self.pattern_lbl.set_text(
+            "%s  |  %.2gx" % (self._pattern, self.engine.playback_rate)
+        )
 
     def _on_faster(self):
         if self.engine is None:
             return
-        self.engine.set_bps(self.engine.bps + 0.5)
-        self._bps = self.engine.bps
-        self.pattern_lbl.set_text("%s  |  %.1f bps" % (self._pattern, self._bps))
+        self.engine.set_playback_rate(self.engine.playback_rate + 0.25)
+        self.pattern_lbl.set_text(
+            "%s  |  %.2gx" % (self._pattern, self.engine.playback_rate)
+        )
