@@ -133,11 +133,11 @@ _RESTING_X = 25.0
 _G = 980.0  # CGS
 _DWELL_DEFAULT = 1.3
 _AIR_BEATS_MIN = 0.3
-# Hermite carry: full TossPath tip speeds overshoot; damp toward JL-looking arcs.
+# Hermite carry: match softcatch/throw tip speeds enough to dip, not overshoot.
 _HAND_VEL_SCALE = 0.35
-_HAND_VZ_SCALE = 0.12  # keep carries near the juggling plane (z≈0)
-_HAND_Z_MIN = -4.0
-_HAND_Z_MAX = 8.0
+_HAND_VZ_SCALE = 0.40  # softcatch→throw cubic must dip and rise into the throw
+_HAND_Z_MIN = -18.0
+_HAND_Z_MAX = 10.0
 # Slight visual lift so toss peaks clear the shoulders (hands stay unscaled).
 _BALL_Z_BOOST = 1.28
 
@@ -177,6 +177,44 @@ def catch_xz(hand, height):
 
 def resting_xz(hand):
     return (_hand_sign(hand) * _RESTING_X, 0.0)
+
+
+def _next_beat_same_hand_has_real_throw(beats, is_sync, beat_index, hand_id, cycles_period):
+    """JL resolveModifiers: look at th[hand][i+1] for a real (non-empty) throw.
+
+    Async vanilla: the other hand throws on i+1, so this is false → hold-2.
+    Sync (e.g. (2,2)): same hand throws every beat → toss-2.
+    """
+    period = len(beats)
+    if period == 0:
+        return False
+    ni = beat_index + 1
+    if ni >= cycles_period:
+        return False
+    if is_sync:
+        beat = beats[ni % period]
+        throws = beat[1] if hand_id == RIGHT else beat[2]
+        for h, _c in throws:
+            if h != 0:
+                return True
+        return False
+    # Async: only the active hand has throws at ni. Starting RIGHT on even gi.
+    active = RIGHT if (ni % 2) == 0 else LEFT
+    if active != hand_id:
+        return False
+    for h, _c in beats[ni % period]:
+        if h != 0:
+            return True
+    return False
+
+
+def _is_hold_2(height, crossing, beats, is_sync, beat_index, hand_id, cycles_period):
+    """JL: same-hand 2 is a hold unless beat i+1 for that hand has a real throw."""
+    if height != 2 or crossing:
+        return False
+    return not _next_beat_same_hand_has_real_throw(
+        beats, is_sync, beat_index, hand_id, cycles_period
+    )
 
 
 def _hermite_coeffs(x0, v0, x1, v1, T):
@@ -362,6 +400,7 @@ class JuggleEngine:
     def _resimulate(self, cycles):
         beats = self.beats
         period = len(beats)
+        cycles_period = cycles * period
         hands = {RIGHT: [], LEFT: []}
         next_ball = [0]
         flights = []
@@ -388,12 +427,26 @@ class JuggleEngine:
         hand = RIGHT
         for cycle in range(cycles):
             for bi, beat in enumerate(beats):
+                gi = cycle * period + bi
                 if self.is_sync:
                     unit = self.beat_ms / 2.0
-                    t_ms = (cycle * period + bi) * self.beat_ms
+                    t_ms = gi * self.beat_ms
                     for hand_id, throws in ((RIGHT, beat[1]), (LEFT, beat[2])):
                         for height, crossing in throws:
                             if height == 0:
+                                continue
+                            if _is_hold_2(
+                                height,
+                                crossing,
+                                beats,
+                                True,
+                                gi,
+                                hand_id,
+                                cycles_period,
+                            ):
+                                # Hold: ball stays in hand; no TossPath flight.
+                                ball = acquire(hand_id, t_ms)
+                                release(hand_id, ball, t_ms)
                                 continue
                             ball = acquire(hand_id, t_ms)
                             dest = (
@@ -416,9 +469,21 @@ class JuggleEngine:
                             )
                             release(dest, ball, land)
                 else:
-                    t_ms = (cycle * period + bi) * self.beat_ms
+                    t_ms = gi * self.beat_ms
                     for height, crossing in beat:
                         if height == 0:
+                            continue
+                        if _is_hold_2(
+                            height,
+                            crossing,
+                            beats,
+                            False,
+                            gi,
+                            hand,
+                            cycles_period,
+                        ):
+                            ball = acquire(hand, t_ms)
+                            release(hand, ball, t_ms)
                             continue
                         ball = acquire(hand, t_ms)
                         dest = hand if not crossing else (LEFT if hand == RIGHT else RIGHT)
@@ -446,14 +511,15 @@ class JuggleEngine:
             x0, z0 = throw_xz(f["hand0"], f["height"], f["crossing"])
             x1, z1 = catch_xz(f["hand1"], f["height"])
             T = max(1e-4, (f["t1"] - f["t0"]) / 1000.0)
-            tc = _toss_coeffs(x0, z0, x1, z1, T)
             f["x0"] = x0
             f["z0"] = z0
             f["x1"] = x1
             f["z1"] = z1
-            f["toss"] = tc
+            f["toss"] = _toss_coeffs(x0, z0, x1, z1, T)
 
-        # Per-hand events (throw + catch), then Hermite between consecutive.
+        # Only real tosses get throw/catch knots — hold-2s emit no events, so
+        # softcatch of the prior toss Hermites straight into the next real throw
+        # (dip then rise into the throw), matching JL layoutHandPaths.
         events = {RIGHT: [], LEFT: []}
         for f in flights:
             tc = f["toss"]
@@ -483,7 +549,7 @@ class JuggleEngine:
         for h in (RIGHT, LEFT):
             events[h].sort(key=lambda e: (e["t"], 0 if e["kind"] == "catch" else 1))
 
-        # hold_until = next throw from catching hand (carry ends at throw).
+        # hold_until = next real throw from catching hand (spans hold-2 beats).
         throws_by_hand = {
             RIGHT: [e for e in events[RIGHT] if e["kind"] == "throw"],
             LEFT: [e for e in events[LEFT] if e["kind"] == "throw"],
@@ -563,7 +629,7 @@ class JuggleEngine:
                 x, z = _toss_pos(f["toss"], t)
                 balls[b] = (x, z)
             elif t1 < t_loop <= hold_until:
-                # Carry: ball follows catching hand
+                # Carry (includes JL hold-2 beats): ball follows catching hand
                 balls[b] = hands_cm[f["hand1"]]
 
         for bid in range(self.num_balls):
