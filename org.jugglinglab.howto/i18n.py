@@ -36,6 +36,11 @@ STRINGS = {
         "fr": "Cascade a 3 pas a pas",
         "en": "3-Cascade Step By Step",
     },
+    "section_ball3_tricks": {
+        "nl": "3-bal tricks",
+        "fr": "Tours a 3 balles",
+        "en": "3-Ball Tricks",
+    },
     "section_fountain4": {
         "nl": "4-fontein stap voor stap",
         "fr": "Fontaine a 4 pas a pas",

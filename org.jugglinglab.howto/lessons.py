@@ -100,6 +100,255 @@ SECTIONS = [
         ],
     },
     {
+        "id": "ball3_tricks",
+        "title_key": "section_ball3_tricks",
+        "title": {
+            "nl": "3-bal tricks",
+            "fr": "Tours a 3 balles",
+            "en": "3-Ball Tricks",
+        },
+        "lessons": [
+            {
+                "name": {
+                    "nl": "3-bal flash",
+                    "fr": "Flash a 3 balles",
+                    "en": "3-ball Flash",
+                },
+                "pattern": "333355500",
+                "bps": 3.5,
+                "tip": {
+                    "nl": "Cascade, dan drie hoge 5-worpen en twee pauzes.",
+                    "fr": "Cascade, puis trois 5 hauts et deux pauses.",
+                    "en": "Cascade, then three high 5s and two empty beats.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Chops",
+                    "fr": "Chops",
+                    "en": "Chops",
+                },
+                "pattern": "(4x,2)(2,4x)",
+                "bps": 5.5,
+                "tip": {
+                    "nl": "Sync: kruisende 4 met hold. Handbeweging vereenvoudigd.",
+                    "fr": "Sync: 4 croises avec hold. Mouvement des mains simplifie.",
+                    "en": "Sync: crossing 4s with holds. Hand motion simplified.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Appel eten",
+                    "fr": "Manger une pomme",
+                    "en": "Eating an apple",
+                },
+                "pattern": "33333423",
+                "bps": 3.6,
+                "tip": {
+                    "nl": "Cascade, dan 4-2-3: even pauze in het ritme.",
+                    "fr": "Cascade, puis 4-2-3: une pause dans le rythme.",
+                    "en": "Cascade, then 4-2-3: a break in the rhythm.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "1Up-2Up A (kolommen)",
+                    "fr": "1Up-2Up A (colonnes)",
+                    "en": "1Up-2Up A (Columns)",
+                },
+                "pattern": "(4,0)(4,4)",
+                "bps": 4.0,
+                "tip": {
+                    "nl": "Een bal omhoog, dan twee samen - kolommen-ritme.",
+                    "fr": "Une balle en haut, puis deux ensemble - rythme colonnes.",
+                    "en": "One ball up, then two together - columns rhythm.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "1Up-2Up B",
+                    "fr": "1Up-2Up B",
+                    "en": "1Up-2Up B",
+                },
+                "pattern": "(4,4)(4x,0)(4,4)(0,4x)",
+                "bps": 4.0,
+                "tip": {
+                    "nl": "Kolommen met wisselende kruisworpen.",
+                    "fr": "Colonnes avec lancers croises alternes.",
+                    "en": "Columns with alternating crossing throws.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "1Up-2Up C",
+                    "fr": "1Up-2Up C",
+                    "en": "1Up-2Up C",
+                },
+                "pattern": "(4,4)(4x,0)(4,4)(0,4)(4,4)(0,4x)(4,4)(4,0)",
+                "bps": 4.3,
+                "tip": {
+                    "nl": "Langere 1Up-2Up-cyclus met afwisselende kanten.",
+                    "fr": "Cycle 1Up-2Up plus long, cotes alternes.",
+                    "en": "Longer 1Up-2Up cycle, alternating sides.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "1Up-2Up E",
+                    "fr": "1Up-2Up E",
+                    "en": "1Up-2Up E",
+                },
+                "pattern": "(4,4)(4,0)",
+                "bps": 4.2,
+                "tip": {
+                    "nl": "Twee samen, dan een solo - simpele kolommen-variant.",
+                    "fr": "Deux ensemble, puis une seule - variante colonnes simple.",
+                    "en": "Two together, then one solo - simple columns variant.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "1Up-2Up F",
+                    "fr": "1Up-2Up F",
+                    "en": "1Up-2Up F",
+                },
+                "pattern": "(6,6)(2x,0)(0,4x)",
+                "bps": 6.5,
+                "tip": {
+                    "nl": "Hoge dubbele 6, dan kruisende holds.",
+                    "fr": "Double 6 haut, puis holds croises.",
+                    "en": "High double 6, then crossing holds.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "2-in-1-hand tennis",
+                    "fr": "Tennis 2-dans-1-main",
+                    "en": "2-in-1-Hand Tennis",
+                },
+                "pattern": "(2,4)(2,4x)(4,2)(4x,2)",
+                "bps": 5.0,
+                "tip": {
+                    "nl": "Twee ballen wisselen van kant terwijl de derde vasthoudt.",
+                    "fr": "Deux balles changent de cote pendant qu'une reste.",
+                    "en": "Two balls swap sides while the third is held.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Shuffle (the slam)",
+                    "fr": "Shuffle (the slam)",
+                    "en": "Shuffle (The Slam)",
+                },
+                "pattern": "(2x,4x)",
+                "bps": 4.5,
+                "tip": {
+                    "nl": "Alle worpen kruisen - klassieke shuffle.",
+                    "fr": "Tous les lancers croisent - shuffle classique.",
+                    "en": "All throws cross - classic shuffle.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "See-saw shuffle",
+                    "fr": "See-saw shuffle",
+                    "en": "See Saw Shuffle (Luke's Shuffle)",
+                },
+                "pattern": "(2x,4)(4,2x)",
+                "bps": 4.5,
+                "tip": {
+                    "nl": "Afwisselend kruisende 2 en rechte 4.",
+                    "fr": "Alternance de 2 croises et 4 droits.",
+                    "en": "Alternating crossing 2s and straight 4s.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "441 shuffle",
+                    "fr": "441 shuffle",
+                    "en": "441 Shuffle",
+                },
+                "pattern": "441",
+                "bps": 5.5,
+                "tip": {
+                    "nl": "Klassieke 441: twee 4-worpen en een snelle 1.",
+                    "fr": "441 classique: deux 4 et un 1 rapide.",
+                    "en": "Classic 441: two 4s and a quick 1.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Both side slam",
+                    "fr": "Both side slam",
+                    "en": "Both Side Slam",
+                },
+                "pattern": "(2x,4x)(4x,2)(4x,2x)(2,4x)",
+                "bps": 5.0,
+                "tip": {
+                    "nl": "Shuffle-variant die naar beide kanten slamt.",
+                    "fr": "Variante shuffle qui tape des deux cotes.",
+                    "en": "Shuffle variant that slams to both sides.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Robot (machine, factory)",
+                    "fr": "Robot (machine, factory)",
+                    "en": "Robot (Machine,Factory)",
+                },
+                "pattern": "242334",
+                "bps": 5.0,
+                "tip": {
+                    "nl": "Siteswap 242334 - handpaden vereenvoudigd.",
+                    "fr": "Siteswap 242334 - chemins de mains simplifies.",
+                    "en": "Siteswap 242334 - hand paths simplified.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Exchange (pendulum, drop)",
+                    "fr": "Exchange (pendulum, drop)",
+                    "en": "Exchange (Pendulum,Drop)",
+                },
+                "pattern": "2334",
+                "bps": 5.4,
+                "tip": {
+                    "nl": "Siteswap 2334 - handpaden vereenvoudigd.",
+                    "fr": "Siteswap 2334 - chemins de mains simplifies.",
+                    "en": "Siteswap 2334 - hand paths simplified.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Follow",
+                    "fr": "Follow",
+                    "en": "Follow",
+                },
+                "pattern": "423",
+                "bps": 5.0,
+                "tip": {
+                    "nl": "Klassieke 423 - handpaden vereenvoudigd.",
+                    "fr": "423 classique - chemins de mains simplifies.",
+                    "en": "Classic 423 - hand paths simplified.",
+                },
+            },
+            {
+                "name": {
+                    "nl": "Rubenstein's revenge",
+                    "fr": "Rubenstein's revenge",
+                    "en": "Rubenstein's Revenge",
+                },
+                "pattern": "35223",
+                "bps": 5.0,
+                "tip": {
+                    "nl": "Siteswap 35223 - handpaden vereenvoudigd.",
+                    "fr": "Siteswap 35223 - chemins de mains simplifies.",
+                    "en": "Siteswap 35223 - hand paths simplified.",
+                },
+            },
+        ],
+    },
+    {
         "id": "fountain4",
         "title_key": "section_fountain4",
         "title": {
