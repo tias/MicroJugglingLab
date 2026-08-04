@@ -97,6 +97,26 @@ def make_subtitle(parent, y=72):
     return lbl
 
 
+def make_side_label(parent, muted=False, font_size=14):
+    """Left-column label: full width, wrap, left-aligned (for side-by-side layouts)."""
+    lbl = lv.label(parent)
+    lbl.set_style_text_color(lv.color_hex(MUTED if muted else TEXT), 0)
+    lbl.set_long_mode(lv.label.LONG_MODE.WRAP)
+    lbl.set_width(lv.pct(100))
+    try:
+        if font_size >= 16:
+            lbl.set_style_text_font(lv.font_montserrat_16, 0)
+        else:
+            lbl.set_style_text_font(lv.font_montserrat_14, 0)
+    except Exception:
+        pass
+    try:
+        lbl.set_style_text_align(lv.TEXT_ALIGN.LEFT, 0)
+    except Exception:
+        pass
+    return lbl
+
+
 def make_panel(parent, height_pct=68, bottom_margin=-8, scrollable=False):
     body = lv.obj(parent)
     body.set_size(lv.pct(94), lv.pct(height_pct))

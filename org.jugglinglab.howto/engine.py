@@ -143,6 +143,8 @@ _SECS_AIRTIME_MAX = 2.6
 _SCREEN_PEAK_Z_4 = 78.0
 _LAYOUT_Z_MAX = 85.0
 _SCREEN_TOP_MARGIN_PX = 6.0
+# Hand plane (z=0) as fraction of stage height; higher = closer to bottom.
+_ORIGIN_Y_FRAC = 0.87
 # Hermite carry: match softcatch/throw tip speeds enough to dip, not overshoot.
 _HAND_VEL_SCALE = 0.35
 _HAND_VZ_SCALE = 0.40  # softcatch→throw cubic must dip and rise into the throw
@@ -284,7 +286,7 @@ def _top_of_frame_peak_z(stage_h):
     z_min = WAIST_H - 8.0
     z_max = _LAYOUT_Z_MAX
     scale = (stage_h * 0.72) / (z_max - z_min)
-    origin_y = stage_h * 0.78
+    origin_y = stage_h * _ORIGIN_Y_FRAC
     peak = (origin_y - _SCREEN_TOP_MARGIN_PX) / scale
     if peak < _SCREEN_PEAK_Z_4:
         return _SCREEN_PEAK_Z_4
@@ -430,7 +432,7 @@ class JuggleEngine:
         self.scale = min(scale_x, scale_z)
         self.origin_x = self.width * 0.5
         # z=0 (hands) sits in lower portion of the stage
-        self.origin_y = self.height * 0.78
+        self.origin_y = self.height * _ORIGIN_Y_FRAC
 
         self.shoulders = {
             RIGHT: self.to_screen(*self.shoulder_cm[RIGHT]),

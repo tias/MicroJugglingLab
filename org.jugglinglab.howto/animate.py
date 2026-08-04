@@ -117,34 +117,53 @@ class Animator(Activity):
         U.make_tab_btn(top, "-", self._on_slower, width_pct=19)
         U.make_tab_btn(top, "+", self._on_faster, width_pct=19)
 
-        self.title_lbl = U.make_title(screen, y=44, font_size=14)
+        # Content row: left text (~1/3) | right stage (~2/3)
+        content = lv.obj(screen)
+        content.set_width(lv.pct(100))
+        content.set_height(240 - U.TAB_H)
+        content.align(lv.ALIGN.TOP_MID, 0, U.TAB_H)
+        content.set_style_bg_opa(0, 0)
+        content.set_style_border_width(0, 0)
+        content.set_style_pad_all(4, 0)
+        content.set_style_pad_column(6, 0)
+        content.set_flex_flow(lv.FLEX_FLOW.ROW)
+        content.set_flex_align(
+            lv.FLEX_ALIGN.START, lv.FLEX_ALIGN.START, lv.FLEX_ALIGN.START
+        )
+        content.remove_flag(lv.obj.FLAG.SCROLLABLE)
+
+        left = lv.obj(content)
+        left.set_size(lv.pct(33), lv.pct(100))
+        left.set_style_bg_opa(0, 0)
+        left.set_style_border_width(0, 0)
+        left.set_style_pad_all(2, 0)
+        left.set_style_pad_row(4, 0)
+        left.set_flex_flow(lv.FLEX_FLOW.COLUMN)
+        left.set_flex_align(
+            lv.FLEX_ALIGN.START, lv.FLEX_ALIGN.START, lv.FLEX_ALIGN.START
+        )
+        left.add_flag(lv.obj.FLAG.SCROLLABLE)
+
+        self.title_lbl = U.make_side_label(left, muted=False, font_size=14)
         self.title_lbl.set_text(title)
 
-        self.pattern_lbl = U.make_subtitle(screen, y=62)
+        self.pattern_lbl = U.make_side_label(left, muted=True, font_size=14)
         self.pattern_lbl.set_text("%s  |  %.1f bps" % (pattern, bps))
 
-        tip_h = 0
         if tip:
-            tip_lbl = lv.label(screen)
+            tip_lbl = U.make_side_label(left, muted=True, font_size=14)
             tip_lbl.set_text(tip)
-            try:
-                tip_lbl.set_long_mode(lv.label.LONG_MODE.DOT)
-            except Exception:
-                tip_lbl.set_long_mode(lv.label.LONG_MODE.SCROLL_CIRCULAR)
-            tip_lbl.set_width(lv.pct(92))
-            tip_lbl.set_style_text_color(lv.color_hex(U.MUTED), 0)
-            tip_lbl.align(lv.ALIGN.TOP_MID, 0, 78)
-            tip_h = 18
 
-        stage_top = 78 + tip_h + 4
-        stage = lv.obj(screen)
+        stage = lv.obj(content)
         stage.set_style_bg_color(lv.color_hex(U.PANEL), 0)
         stage.set_style_border_width(0, 0)
         stage.set_style_pad_all(0, 0)
         stage.set_style_radius(6, 0)
-        stage.set_width(lv.pct(94))
-        stage.set_height(240 - stage_top - 4)
-        stage.align(lv.ALIGN.TOP_MID, 0, stage_top)
+        stage.set_size(lv.pct(67), lv.pct(100))
+        try:
+            stage.set_flex_grow(1)
+        except Exception:
+            pass
         stage.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         def _mk_line():
@@ -185,10 +204,10 @@ class Animator(Activity):
         self.hand_l.set_style_border_width(0, 0)
 
         self.stage = stage
+        self._content = content
         self._pattern = pattern
         self._bps = bps
         self._tip = tip
-        self._stage_top = stage_top
 
         self.setContentView(screen)
 
@@ -206,21 +225,24 @@ class Animator(Activity):
         self.engine = None
 
     def _ensure_engine(self):
+        # Content row sits under the tab bar; resize to actual screen height,
+        # then let the stage fill the right column via flex.
         try:
-            scr_h = self.stage.get_parent().get_height()
+            content = self._content
+            scr_h = content.get_parent().get_height()
             if scr_h > 80:
-                new_h = max(80, scr_h - self._stage_top - 4)
-                if abs(new_h - self.stage.get_height()) > 2:
-                    self.stage.set_height(new_h)
+                new_h = max(80, scr_h - U.TAB_H)
+                if abs(new_h - content.get_height()) > 2:
+                    content.set_height(new_h)
         except Exception:
             pass
 
         w = self.stage.get_width()
         h = self.stage.get_height()
         if w < 40:
-            w = 300
+            w = 200
         if h < 40:
-            h = 140
+            h = 180
         self._cw = w
         self._ch = h
         if self.engine is None:
