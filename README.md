@@ -32,15 +32,31 @@ Use your serial device if it is not `/dev/ttyACM0`. On Linux, your user usually 
 
 ## Optional: test on desktop MicroPythonOS
 
-If you have a [MicroPythonOS desktop](https://docs.micropythonos.com/os-development/running-on-desktop/) checkout:
+A desktop checkout is set up next to this project at `/home/tias/vanalles/MicroPythonOS` (v0.16.0 Linux binary + symlink to this app).
 
 ```bash
-# from your MicroPythonOS tree
-ln -s /path/to/mps_juggling_lab/org.jugglinglab.howto internal_filesystem/apps/org.jugglinglab.howto
+cd /home/tias/vanalles/MicroPythonOS
+./scripts/run_desktop.sh                          # launcher, then open Juggle How-To
+# or jump straight into the app:
+./scripts/run_desktop.sh org.jugglinglab.howto
+```
+
+Edit files under `mps_juggling_lab/org.jugglinglab.howto/`, then restart `run_desktop.sh` to reload. Layout is tuned for ~320×240; the desktop window may be larger.
+
+If you recreate the setup elsewhere:
+
+```bash
+git clone --recurse-submodules --depth 1 --shallow-submodules \
+  https://github.com/MicroPythonOS/MicroPythonOS.git
+# Download MicroPythonOS_x64_linux_*.elf from GitHub Releases into:
+#   lvgl_micropython/build/lvgl_micropy_unix  (chmod +x)
+ln -sfn /path/to/mps_juggling_lab/org.jugglinglab.howto \
+  MicroPythonOS/internal_filesystem/apps/org.jugglinglab.howto
 ./scripts/run_desktop.sh
 ```
 
-Open **Juggle How-To** from the launcher. Edit the app files and restart the desktop OS to iterate. Still smoke-test on the real badge before publishing — timing and layout are tuned for 320×240.
+Docs: [Running on desktop](https://docs.micropythonos.com/os-development/running-on-desktop/).
+
 
 ## Bundle `.mpk` and publish on BadgeHub
 

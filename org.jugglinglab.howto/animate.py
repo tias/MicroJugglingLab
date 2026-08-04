@@ -66,7 +66,7 @@ class Animator(Activity):
         stage.set_style_radius(0, 0)
         stage.align(lv.ALIGN.TOP_MID, 0, 40)
         stage.set_size(lv.pct(100), lv.pct(62))
-        stage.clear_flag(lv.obj.FLAG.SCROLLABLE)
+        stage.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         self.head_obj = lv.obj(stage)
         self.head_obj.set_size(18, 18)
@@ -109,7 +109,7 @@ class Animator(Activity):
         if tip:
             tip_lbl = lv.label(screen)
             tip_lbl.set_text(tip)
-            tip_lbl.set_long_mode(lv.label.LONG.WRAP)
+            tip_lbl.set_long_mode(lv.label.LONG_MODE.WRAP)
             tip_lbl.set_width(lv.pct(92))
             tip_lbl.set_style_text_color(lv.color_hex(0x8890A0), 0)
             tip_lbl.align(lv.ALIGN.BOTTOM_MID, 0, -48)
@@ -122,7 +122,7 @@ class Animator(Activity):
         bar.set_style_pad_all(4, 0)
         bar.set_flex_flow(lv.FLEX_FLOW.ROW)
         bar.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
-        bar.clear_flag(lv.obj.FLAG.SCROLLABLE)
+        bar.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         self._mk_btn(bar, "Back", self._on_back)
         self.play_btn = self._mk_btn(bar, "Pause", self._on_play)
@@ -188,7 +188,7 @@ class Animator(Activity):
             color = BALL_COLORS[i % len(BALL_COLORS)]
             b.set_style_bg_color(lv.color_hex(color), 0)
             b.set_style_border_width(0, 0)
-            b.clear_flag(lv.obj.FLAG.SCROLLABLE)
+            b.remove_flag(lv.obj.FLAG.SCROLLABLE)
             self.ball_objs.append(b)
 
     def _start_timer(self):
@@ -238,7 +238,7 @@ class Animator(Activity):
         for i, obj in enumerate(self.ball_objs):
             if i in balls:
                 x, y = balls[i]
-                obj.clear_flag(lv.obj.FLAG.HIDDEN)
+                obj.remove_flag(lv.obj.FLAG.HIDDEN)
                 obj.set_pos(int(x - 7), int(y - 7))
             else:
                 obj.add_flag(lv.obj.FLAG.HIDDEN)
