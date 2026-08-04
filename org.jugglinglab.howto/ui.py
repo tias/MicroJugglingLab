@@ -18,6 +18,7 @@ def make_screen():
     screen = lv.obj()
     screen.set_style_bg_color(lv.color_hex(BG), 0)
     screen.set_style_pad_all(0, 0)
+    screen.remove_flag(lv.obj.FLAG.SCROLLABLE)
     return screen
 
 
@@ -53,6 +54,12 @@ def make_tab_btn(bar, text, cb, width_pct=None, active=False):
     btn.set_style_radius(0, 0)
     btn.set_style_shadow_width(0, 0)
     btn.set_style_bg_color(lv.color_hex(ACCENT if active else TAB_IDLE), 0)
+    # Avoid click-focus so returning from a child activity does not
+    # scroll_to_view a focused control inside a scrollable parent.
+    try:
+        btn.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
+    except Exception:
+        pass
     if cb is not None:
         btn.add_event_cb(lambda e, c=cb: c(), lv.EVENT.CLICKED, None)
     lbl = lv.label(btn)
@@ -117,6 +124,10 @@ def make_row_btn(parent, text, cb, height=48):
     btn = lv.button(parent)
     btn.set_size(lv.pct(100), height)
     btn.set_style_bg_color(lv.color_hex(BTN), 0)
+    try:
+        btn.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
+    except Exception:
+        pass
     if cb is not None:
         btn.add_event_cb(lambda e, c=cb: c(), lv.EVENT.CLICKED, None)
     lbl = lv.label(btn)
