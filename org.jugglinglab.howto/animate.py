@@ -1,10 +1,11 @@
-# Animator activity — live siteswap view for Fri3d Badge / MicroPythonOS.
+# Animator activity — live siteswap view with shared app chrome.
 
 import lvgl as lv
 from mpos import Activity
 
 from engine import JuggleEngine, RIGHT, LEFT
 from i18n import get_lang, t
+import ui as U
 
 BALL_COLORS = (
     0xE05050,
@@ -44,30 +45,50 @@ class Animator(Activity):
         except (TypeError, ValueError):
             bps = 3.0
 
-        screen = lv.obj()
-        screen.set_style_bg_color(lv.color_hex(0x12161F), 0)
+        screen = U.make_screen()
 
-        self.title_lbl = lv.label(screen)
+        # Top: Back | Pause | - | + (all controls in one strip)
+        top = U.make_tab_bar(screen)
+        U.make_tab_btn(
+            top, t("back", self._lang), self._on_back, width_pct=26, active=True
+        )
+        self.play_btn, self.play_lbl = U.make_tab_btn(
+            top, t("pause", self._lang), self._on_play, width_pct=36
+        )
+        U.make_tab_btn(top, "-", self._on_slower, width_pct=19)
+        U.make_tab_btn(top, "+", self._on_faster, width_pct=19)
+
+        # Compact title block under tabs (~40px used by bar)
+        self.title_lbl = U.make_title(screen, y=44, font_size=14)
         self.title_lbl.set_text(title)
-        self.title_lbl.set_style_text_color(lv.color_hex(0xF0F0F0), 0)
-        self.title_lbl.align(lv.ALIGN.TOP_MID, 0, 4)
-        try:
-            self.title_lbl.set_style_text_font(lv.font_montserrat_14, 0)
-        except Exception:
-            pass
 
-        self.pattern_lbl = lv.label(screen)
+        self.pattern_lbl = U.make_subtitle(screen, y=62)
         self.pattern_lbl.set_text("%s  |  %.1f bps" % (pattern, bps))
-        self.pattern_lbl.set_style_text_color(lv.color_hex(0xA0A8B8), 0)
-        self.pattern_lbl.align(lv.ALIGN.TOP_MID, 0, 22)
 
+        tip_h = 0
+        if tip:
+            tip_lbl = lv.label(screen)
+            tip_lbl.set_text(tip)
+            try:
+                tip_lbl.set_long_mode(lv.label.LONG_MODE.DOT)
+            except Exception:
+                tip_lbl.set_long_mode(lv.label.LONG_MODE.SCROLL_CIRCULAR)
+            tip_lbl.set_width(lv.pct(92))
+            tip_lbl.set_style_text_color(lv.color_hex(U.MUTED), 0)
+            tip_lbl.align(lv.ALIGN.TOP_MID, 0, 78)
+            tip_h = 18
+
+        # Stage fills remaining height to the bottom of the 240px screen
+        stage_top = 78 + tip_h + 4
+        # Assume ~240px display; leave 4px bottom pad
         stage = lv.obj(screen)
-        stage.set_style_bg_color(lv.color_hex(0x1A2030), 0)
+        stage.set_style_bg_color(lv.color_hex(U.PANEL), 0)
         stage.set_style_border_width(0, 0)
         stage.set_style_pad_all(0, 0)
-        stage.set_style_radius(0, 0)
-        stage.align(lv.ALIGN.TOP_MID, 0, 40)
-        stage.set_size(lv.pct(100), lv.pct(62))
+        stage.set_style_radius(6, 0)
+        stage.set_width(lv.pct(94))
+        stage.set_height(240 - stage_top - 4)
+        stage.align(lv.ALIGN.TOP_MID, 0, stage_top)
         stage.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         self.head_obj = lv.obj(stage)
@@ -107,41 +128,9 @@ class Animator(Activity):
         self._pattern = pattern
         self._bps = bps
         self._tip = tip
-
-        if tip:
-            tip_lbl = lv.label(screen)
-            tip_lbl.set_text(tip)
-            tip_lbl.set_long_mode(lv.label.LONG_MODE.WRAP)
-            tip_lbl.set_width(lv.pct(92))
-            tip_lbl.set_style_text_color(lv.color_hex(0x8890A0), 0)
-            tip_lbl.align(lv.ALIGN.BOTTOM_MID, 0, -48)
-
-        bar = lv.obj(screen)
-        bar.set_size(lv.pct(100), 44)
-        bar.align(lv.ALIGN.BOTTOM_MID, 0, 0)
-        bar.set_style_bg_color(lv.color_hex(0x0E1218), 0)
-        bar.set_style_border_width(0, 0)
-        bar.set_style_pad_all(4, 0)
-        bar.set_flex_flow(lv.FLEX_FLOW.ROW)
-        bar.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
-        bar.remove_flag(lv.obj.FLAG.SCROLLABLE)
-
-        self._mk_btn(bar, t("back", self._lang), self._on_back)
-        self.play_btn = self._mk_btn(bar, t("pause", self._lang), self._on_play)
-        self.play_lbl = self.play_btn.get_child(0)
-        self._mk_btn(bar, "-", self._on_slower)
-        self._mk_btn(bar, "+", self._on_faster)
+        self._stage_top = stage_top
 
         self.setContentView(screen)
-
-    def _mk_btn(self, parent, text, cb):
-        btn = lv.button(parent)
-        btn.set_size(70, 34)
-        btn.add_event_cb(lambda e, c=cb: c(), lv.EVENT.CLICKED, None)
-        lbl = lv.label(btn)
-        lbl.set_text(text)
-        lbl.center()
-        return btn
 
     def onResume(self, screen):
         super().onResume(screen)
@@ -157,12 +146,22 @@ class Animator(Activity):
         self.engine = None
 
     def _ensure_engine(self):
+        # Fit stage to remaining screen height if display is not exactly 240.
+        try:
+            scr_h = self.stage.get_parent().get_height()
+            if scr_h > 80:
+                new_h = max(80, scr_h - self._stage_top - 4)
+                if abs(new_h - self.stage.get_height()) > 2:
+                    self.stage.set_height(new_h)
+        except Exception:
+            pass
+
         w = self.stage.get_width()
         h = self.stage.get_height()
         if w < 40:
-            w = 320
+            w = 300
         if h < 40:
-            h = 180
+            h = 140
         self._cw = w
         self._ch = h
         if self.engine is None:
@@ -215,10 +214,15 @@ class Animator(Activity):
 
     def _set_line(self, line, x0, y0, x1, y1):
         try:
-            line.set_points([{"x": int(x0), "y": int(y0)}, {"x": int(x1), "y": int(y1)}], 2)
+            line.set_points(
+                [{"x": int(x0), "y": int(y0)}, {"x": int(x1), "y": int(y1)}], 2
+            )
         except TypeError:
             line.set_points(
-                [lv.point_t({"x": int(x0), "y": int(y0)}), lv.point_t({"x": int(x1), "y": int(y1)})],
+                [
+                    lv.point_t({"x": int(x0), "y": int(y0)}),
+                    lv.point_t({"x": int(x1), "y": int(y1)}),
+                ],
                 2,
             )
 

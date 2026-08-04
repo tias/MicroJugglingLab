@@ -14,6 +14,7 @@ org.jugglinglab.howto/
 ├── section.py       # lessons in one section
 ├── animate.py       # live animation
 ├── engine.py        # siteswap → ball positions
+├── ui.py            # shared chrome (tabs / title / panel)
 ├── i18n.py          # NL | FR | EN strings + prefs
 └── lessons.py       # curriculum
 ```
