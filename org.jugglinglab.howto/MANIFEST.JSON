@@ -1,0 +1,25 @@
+{
+  "name": "Juggle How-To",
+  "publisher": "Juggling Lab community",
+  "short_description": "Learn to juggle with animated lessons",
+  "long_description": "Step-by-step How to Juggle animations for the Fri3d Badge 2026. Inspired by Juggling Lab's beginner curriculum: 3-cascade, 4-fountain, and 5-cascade drills with a live siteswap animator.",
+  "fullname": "org.jugglinglab.howto",
+  "version": "0.1.0",
+  "categories": ["Education", "Games"],
+  "activities": [
+    {
+      "entrypoint": "main.py",
+      "classname": "LessonList",
+      "intent_filters": [
+        {
+          "action": "main",
+          "category": "launcher"
+        }
+      ]
+    },
+    {
+      "entrypoint": "animate.py",
+      "classname": "Animator"
+    }
+  ]
+}
