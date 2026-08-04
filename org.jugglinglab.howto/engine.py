@@ -510,7 +510,8 @@ class JuggleEngine:
             self.warmup_ms = 0.0
             return
 
-        cycles = max(48, 16 * period)
+        # Cap cycles so long periods stay within badge RAM (each flight is heavy).
+        cycles = max(48, min(16 * period, 96))
         flights = self._resimulate(cycles)
         self._apply_squeeze(flights)
         self._attach_paths(flights)
@@ -705,7 +706,7 @@ class JuggleEngine:
         def release(hand_id, ball, t_ms):
             hands[hand_id].append((t_ms, ball))
 
-        def emit_toss(hand_id, height, crossing, beat_t):
+        def emit_toss(hand_id, height, crossing, beat_t, solo=False):
             if height == 1:
                 t0 = beat_t - early_ms
             else:
@@ -727,9 +728,28 @@ class JuggleEngine:
                     "hand1": dest,
                     "height": height,
                     "crossing": crossing,
+                    "solo": solo,
                 }
             )
             release(dest, ball, land)
+
+        def sync_real_throws(throws, hand_id, gi, beat_t):
+            out = []
+            for height, crossing in throws:
+                if height == 0:
+                    continue
+                if _is_hold_2(
+                    height, crossing, beats, True, gi, hand_id, cycles_period
+                ):
+                    ball = acquire(hand_id, beat_t)
+                    release(hand_id, ball, beat_t)
+                    continue
+                out.append((height, crossing))
+            return out
+
+        def side_empty(throws):
+            """True only for a real empty (0) — hold-2 means a ball is still there."""
+            return not any(h != 0 for h, _ in throws)
 
         hand = RIGHT
         for cycle in range(cycles):
@@ -738,23 +758,16 @@ class JuggleEngine:
                 if self.is_sync:
                     # JL: each sync pair occupies 2 beat-index units at 1/bps each.
                     beat_t = gi * pair_ms
-                    for hand_id, throws in ((RIGHT, beat[1]), (LEFT, beat[2])):
-                        for height, crossing in throws:
-                            if height == 0:
-                                continue
-                            if _is_hold_2(
-                                height,
-                                crossing,
-                                beats,
-                                True,
-                                gi,
-                                hand_id,
-                                cycles_period,
-                            ):
-                                ball = acquire(hand_id, beat_t)
-                                release(hand_id, ball, beat_t)
-                                continue
-                            emit_toss(hand_id, height, crossing, beat_t)
+                    r_throws = sync_real_throws(beat[1], RIGHT, gi, beat_t)
+                    l_throws = sync_real_throws(beat[2], LEFT, gi, beat_t)
+                    # Center column only when the other hand is truly empty (0),
+                    # not when it holds a 2 (tennis / yo-yo style).
+                    solo_r = bool(r_throws) and side_empty(beat[2])
+                    solo_l = bool(l_throws) and side_empty(beat[1])
+                    for height, crossing in r_throws:
+                        emit_toss(RIGHT, height, crossing, beat_t, solo=solo_r)
+                    for height, crossing in l_throws:
+                        emit_toss(LEFT, height, crossing, beat_t, solo=solo_l)
                 else:
                     beat_t = gi * self.beat_ms
                     for height, crossing in beat:
@@ -782,6 +795,13 @@ class JuggleEngine:
         for f in flights:
             x0, z0 = throw_xz(f["hand0"], f["height"], f["crossing"])
             x1, z1 = catch_xz(f["hand1"], f["height"])
+            # Same-hand (even) throws: straight up/down columns.
+            # Solo sync throw (other hand empty) → center; else → shoulder width.
+            if f["hand0"] == f["hand1"] and not f["crossing"]:
+                if f.get("solo"):
+                    x0 = x1 = 0.0
+                else:
+                    x0 = x1 = _hand_sign(f["hand0"]) * SHOULDER_HW
             T = max(1e-4, (f["t1"] - f["t0"]) / 1000.0)
             f["x0"] = x0
             f["z0"] = z0
