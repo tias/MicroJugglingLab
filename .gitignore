@@ -1,10 +1,17 @@
+# Build / package output
 dist/
 *.mpk
+
+# Python
 __pycache__/
 *.pyc
-.DS_Store
+
+# Upstream / local checkouts kept in this repo but not tracked
 jugglinglab/
 MicroPythonOS/
 
+# Accidental debris if desktop OS is started from the wrong cwd
 prefs/
 SDLPointer_*
+
+.DS_Store
