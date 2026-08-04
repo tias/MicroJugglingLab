@@ -4,6 +4,7 @@ import lvgl as lv
 from mpos import Activity
 
 from engine import JuggleEngine, RIGHT, LEFT
+from i18n import get_lang, t
 
 BALL_COLORS = (
     0xE05050,
@@ -37,6 +38,7 @@ class Animator(Activity):
         pattern = extras.get("pattern") or "3"
         bps = extras.get("bps")
         tip = extras.get("tip") or ""
+        self._lang = extras.get("lang") or get_lang()
         try:
             bps = float(bps) if bps is not None else 3.0
         except (TypeError, ValueError):
@@ -124,8 +126,8 @@ class Animator(Activity):
         bar.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
         bar.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
-        self._mk_btn(bar, "Back", self._on_back)
-        self.play_btn = self._mk_btn(bar, "Pause", self._on_play)
+        self._mk_btn(bar, t("back", self._lang), self._on_back)
+        self.play_btn = self._mk_btn(bar, t("pause", self._lang), self._on_play)
         self.play_lbl = self.play_btn.get_child(0)
         self._mk_btn(bar, "-", self._on_slower)
         self._mk_btn(bar, "+", self._on_faster)
@@ -251,7 +253,8 @@ class Animator(Activity):
             return
         self.engine.toggle()
         if self.play_lbl:
-            self.play_lbl.set_text("Pause" if self.engine.playing else "Play")
+            key = "pause" if self.engine.playing else "play"
+            self.play_lbl.set_text(t(key, self._lang))
 
     def _on_slower(self):
         if self.engine is None:

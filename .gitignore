@@ -13,5 +13,6 @@ MicroPythonOS/
 # Accidental debris if desktop OS is started from the wrong cwd
 prefs/
 SDLPointer_*
+**/lang.json
 
 .DS_Store

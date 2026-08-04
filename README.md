@@ -10,12 +10,15 @@ Upstream Juggling Lab (Kotlin) lives in `jugglinglab/` for reference only. Deskt
 org.jugglinglab.howto/
 ├── MANIFEST.JSON
 ├── icon_64x64.png
-├── main.py          # lesson list (launcher)
+├── main.py          # main menu (language + sections)
+├── section.py       # lessons in one section
 ├── animate.py       # live animation
 ├── engine.py        # siteswap → ball positions
+├── i18n.py          # NL | FR | EN strings + prefs
 └── lessons.py       # curriculum
 ```
 
+- Main menu with language switch **NL | FR | EN** (default EN), then a How-To track
 - **3-cascade**, **4-fountain**, and **5-cascade** step-by-step patterns
 - Play / pause, ± speed, back
 - Designed for ~320×240 touch UI
