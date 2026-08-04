@@ -92,9 +92,9 @@ SECTIONS = [
                 "pattern": "3",
                 "bps": 2.2,
                 "tip": {
-                    "nl": "Zelfde patroon, trager — let op de bogen.",
-                    "fr": "Meme figure, plus lent — regarde les arcs.",
-                    "en": "Same pattern, slower — watch the peaks.",
+                    "nl": "Zelfde patroon, trager - let op de bogen.",
+                    "fr": "Meme figure, plus lent - regarde les arcs.",
+                    "en": "Same pattern, slower - watch the peaks.",
                 },
             },
         ],
@@ -170,9 +170,9 @@ SECTIONS = [
                 "pattern": "50500",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Hoge worpen met pauzes — leer de 5-timing.",
-                    "fr": "Lancers hauts avec pauses — apprends le rythme du 5.",
-                    "en": "High throws with pauses — learn the 5 timing.",
+                    "nl": "Hoge worpen met pauzes - leer de 5-timing.",
+                    "fr": "Lancers hauts avec pauses - apprends le rythme du 5.",
+                    "en": "High throws with pauses - learn the 5 timing.",
                 },
             },
             {
@@ -240,9 +240,9 @@ SECTIONS = [
                 "pattern": "55550",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Bijna klaar — vier ballen in 5-cascade-slots.",
-                    "fr": "Presque — quatre balles dans les creneaux du 5.",
-                    "en": "Almost there — four balls in 5-cascade slots.",
+                    "nl": "Bijna klaar - vier ballen in 5-cascade-slots.",
+                    "fr": "Presque - quatre balles dans les creneaux du 5.",
+                    "en": "Almost there - four balls in 5-cascade slots.",
                 },
             },
             {
@@ -268,9 +268,9 @@ SECTIONS = [
                 "pattern": "5551",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Vier worpen en een hold — brug naar de cascade.",
-                    "fr": "Quatre lancers puis un hold — pont vers la cascade.",
-                    "en": "Four throws then a hold — bridge to the cascade.",
+                    "nl": "Vier worpen en een hold - brug naar de cascade.",
+                    "fr": "Quatre lancers puis un hold - pont vers la cascade.",
+                    "en": "Four throws then a hold - bridge to the cascade.",
                 },
             },
             {
