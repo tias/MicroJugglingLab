@@ -115,7 +115,7 @@ SECTIONS = [
                     "en": "2 in One Hand",
                 },
                 "pattern": "40",
-                "bps": 3.0,
+                "bps": 4.1,
                 "tip": {
                     "nl": "Twee ballen alleen in de rechterhand (kolommen).",
                     "fr": "Deux balles dans la main droite seulement (colonnes).",
@@ -129,7 +129,7 @@ SECTIONS = [
                     "en": "4-Synchronous Fountain",
                 },
                 "pattern": "(4,4)",
-                "bps": 3.0,
+                "bps": 4.1,
                 "tip": {
                     "nl": "Beide handen gooien samen; ballen blijven aan hun kant.",
                     "fr": "Les deux mains lancent ensemble; les balles restent de leur cote.",
@@ -143,7 +143,7 @@ SECTIONS = [
                     "en": "4-Fountain",
                 },
                 "pattern": "4",
-                "bps": 3.0,
+                "bps": 4.1,
                 "tip": {
                     "nl": "Async fontein: even worpen, kolommen in dezelfde hand.",
                     "fr": "Fontaine async: lancers pairs, colonnes dans la meme main.",
@@ -168,7 +168,7 @@ SECTIONS = [
                     "en": "2 Balls out of a 5-Cascade",
                 },
                 "pattern": "50500",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Hoge worpen met pauzes — leer de 5-timing.",
                     "fr": "Lancers hauts avec pauses — apprends le rythme du 5.",
@@ -182,7 +182,7 @@ SECTIONS = [
                     "en": "Baby Juggling",
                 },
                 "pattern": "52512",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Drie ballen met 5-cascade-ritme (vereenvoudigd).",
                     "fr": "Trois balles au rythme de la cascade a 5 (simplifie).",
@@ -196,7 +196,7 @@ SECTIONS = [
                     "en": "Chase",
                 },
                 "pattern": "50505",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Afwisselend 5-worpen en holds.",
                     "fr": "Alternance de 5 et de holds.",
@@ -210,7 +210,7 @@ SECTIONS = [
                     "en": "Flash",
                 },
                 "pattern": "55500",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Drie hoge worpen, dan twee lege beats.",
                     "fr": "Trois lancers hauts, puis deux temps vides.",
@@ -238,7 +238,7 @@ SECTIONS = [
                     "en": "4 Balls out of a 5-Cascade",
                 },
                 "pattern": "55550",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Bijna klaar — vier ballen in 5-cascade-slots.",
                     "fr": "Presque — quatre balles dans les creneaux du 5.",
@@ -252,7 +252,7 @@ SECTIONS = [
                     "en": "552",
                 },
                 "pattern": "552",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Bekend opstapje naar 5 ballen.",
                     "fr": "Figure courante pour preparer le 5.",
@@ -266,7 +266,7 @@ SECTIONS = [
                     "en": "5551",
                 },
                 "pattern": "5551",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Vier worpen en een hold — brug naar de cascade.",
                     "fr": "Quatre lancers puis un hold — pont vers la cascade.",
@@ -280,7 +280,7 @@ SECTIONS = [
                     "en": "5-Cascade",
                 },
                 "pattern": "5",
-                "bps": 3.0,
+                "bps": 4.6,
                 "tip": {
                     "nl": "Cascade met vijf ballen. Zelfde idee als 3, hogere worpen.",
                     "fr": "Cascade a cinq. Meme idee que le 3, lancers plus hauts.",

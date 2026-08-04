@@ -133,6 +133,16 @@ _RESTING_X = 25.0
 _G = 980.0  # CGS
 _DWELL_DEFAULT = 1.3
 _AIR_BEATS_MIN = 0.3
+_SQUEEZEBEATS = 0.4  # JL MhnPattern default — stagger multi-catches on one beat
+# JL throwsPerSec by throw height (MhnPattern); used for default bps.
+_THROWS_PER_SEC = (2.0, 2.0, 2.0, 2.9, 3.4, 4.1, 4.25, 5.0, 5.0, 5.5)
+_SECS_AIRTIME_MAX = 2.6
+# Badge stage (~320×240): separate peak budgets for 4 vs 5+.
+# Cascade-3 @ 3bps ~50cm boosted; 4s a bit above; 5s fill to the top of the frame
+# at cascade figure scale (z_max=85).
+_SCREEN_PEAK_Z_4 = 70.0
+_LAYOUT_Z_MAX = 85.0
+_SCREEN_TOP_MARGIN_PX = 6.0
 # Hermite carry: match softcatch/throw tip speeds enough to dip, not overshoot.
 _HAND_VEL_SCALE = 0.35
 _HAND_VZ_SCALE = 0.40  # softcatch→throw cubic must dip and rise into the throw
@@ -182,21 +192,17 @@ def resting_xz(hand):
 def _next_beat_same_hand_has_real_throw(beats, is_sync, beat_index, hand_id, cycles_period):
     """JL resolveModifiers: look at th[hand][i+1] for a real (non-empty) throw.
 
-    Async vanilla: the other hand throws on i+1, so this is false → hold-2.
-    Sync (e.g. (2,2)): same hand throws every beat → toss-2.
+    Async vanilla: the other hand throws on i+1 → false → hold-2.
+    Sync: MHN advances 2 half-beats per pair, so i+1 is the empty half-beat → false → hold-2.
     """
     period = len(beats)
     if period == 0:
         return False
+    if is_sync:
+        # Next half-beat slot for this hand is empty inside the sync pair.
+        return False
     ni = beat_index + 1
     if ni >= cycles_period:
-        return False
-    if is_sync:
-        beat = beats[ni % period]
-        throws = beat[1] if hand_id == RIGHT else beat[2]
-        for h, _c in throws:
-            if h != 0:
-                return True
         return False
     # Async: only the active hand has throws at ni. Starting RIGHT on even gi.
     active = RIGHT if (ni % 2) == 0 else LEFT
@@ -215,6 +221,112 @@ def _is_hold_2(height, crossing, beats, is_sync, beat_index, hand_id, cycles_per
     return not _next_beat_same_hand_has_real_throw(
         beats, is_sync, beat_index, hand_id, cycles_period
     )
+
+
+def _beats_one_throw_early(dwell):
+    """JL: max(0, dwell + BEATS_AIRTIME_MIN - 1)."""
+    early = dwell + _AIR_BEATS_MIN - 1.0
+    if early < 0.0:
+        return 0.0
+    return early
+
+
+def _max_throw_height(beats, is_sync):
+    m = 0
+    for b in beats:
+        if is_sync:
+            for h, _c in b[1] + b[2]:
+                if h > m:
+                    m = h
+        else:
+            for h, _c in b:
+                if h > m:
+                    m = h
+    return m
+
+
+def calc_bps(beats, is_sync, dwell=None):
+    """JL MhnPattern.calcBps — default tempo from throw heights."""
+    if dwell is None:
+        dwell = _DWELL_DEFAULT
+    total = 0.0
+    n = 0
+    max_h = 0
+    for b in beats:
+        throws = b[1] + b[2] if is_sync else b
+        for h, _c in throws:
+            if h > max_h:
+                max_h = h
+            if h > 2:
+                i = h if h < 9 else 9
+                total += _THROWS_PER_SEC[i]
+                n += 1
+    tps = (total / n) if n > 0 else 2.0
+    max_flight = (max_h - dwell) / _SECS_AIRTIME_MAX if max_h > 0 else 0.0
+    bps = tps if tps > max_flight else max_flight
+    if bps < 0.5:
+        bps = 0.5
+    return bps
+
+
+def _toss_peak_z(height, bps, dwell):
+    """Parabola peak for a z0=z1=0 TossPath of duration (h-dwell)/bps."""
+    air_beats = height - dwell
+    if air_beats < _AIR_BEATS_MIN:
+        air_beats = _AIR_BEATS_MIN
+    T = air_beats / bps if bps > 0 else air_beats
+    # z_max = g T^2 / 8 for throw/catch at z=0
+    return (_G * T * T) / 8.0
+
+
+def _top_of_frame_peak_z(stage_h):
+    """Boosted cm peak that lands near the top of the stage at cascade framing."""
+    z_min = WAIST_H - 8.0
+    z_max = _LAYOUT_Z_MAX
+    scale = (stage_h * 0.72) / (z_max - z_min)
+    origin_y = stage_h * 0.78
+    peak = (origin_y - _SCREEN_TOP_MARGIN_PX) / scale
+    if peak < _SCREEN_PEAK_Z_4:
+        return _SCREEN_PEAK_Z_4
+    return peak
+
+
+def _peak_budget_cm(max_height, stage_h=200):
+    if max_height >= 5:
+        return _top_of_frame_peak_z(stage_h)
+    return _SCREEN_PEAK_Z_4
+
+
+def _bps_for_peak(max_height, dwell, peak_boosted):
+    """bps so the highest toss's boosted peak equals peak_boosted cm."""
+    if max_height <= 0:
+        return 0.5
+    air_beats = max_height - dwell
+    if air_beats < _AIR_BEATS_MIN:
+        air_beats = _AIR_BEATS_MIN
+    tmax = (8.0 * peak_boosted / (_G * _BALL_Z_BOOST)) ** 0.5
+    if tmax < 1e-6:
+        return 8.0
+    bps = air_beats / tmax
+    if bps < 0.5:
+        return 0.5
+    if bps > 8.0:
+        return 8.0
+    return bps
+
+
+def _clamp_bps_for_screen(bps, beats, is_sync, dwell, stage_h=200):
+    """Fit height≥4 tosses to the badge stage (4s moderate; 5s to frame top)."""
+    max_h = _max_throw_height(beats, is_sync)
+    if max_h < 4:
+        return bps
+    target = _bps_for_peak(max_h, dwell, _peak_budget_cm(max_h, stage_h))
+    if max_h >= 5:
+        # Drive 5+ arcs to the top of the frame (not the cramped mid-height).
+        return target
+    if bps < target:
+        return target
+    return bps
 
 
 def _hermite_coeffs(x0, v0, x1, v1, T):
@@ -270,17 +382,25 @@ def _toss_end_vel(tc):
 class JuggleEngine:
     """Simulate siteswap; report ball/hand/body anchors in screen pixels."""
 
-    def __init__(self, pattern, bps=3.0, dwell=None, width=320, height=200):
+    def __init__(self, pattern, bps=None, dwell=None, width=320, height=200):
         self.pattern = pattern
-        self.bps = float(bps) if bps else 3.0
         self.dwell = float(dwell) if dwell is not None else _DWELL_DEFAULT
         self.width = width
         self.height = height
         self.beats, self.is_sync = parse_siteswap(pattern)
+        if bps is None or bps == "" or float(bps) <= 0:
+            self.bps = calc_bps(self.beats, self.is_sync, self.dwell)
+        else:
+            self.bps = float(bps)
+        self.bps = _clamp_bps_for_screen(
+            self.bps, self.beats, self.is_sync, self.dwell, self.height
+        )
         self.beat_ms = 1000.0 / self.bps
         self.num_balls = max(1, average_balls(self.beats, self.is_sync))
         self.flights = []
         self.hand_segs = {RIGHT: [], LEFT: []}
+        self.loop_ms = self.beat_ms
+        self.warmup_ms = 0.0
         self._t0 = _now_ms()
         self._paused_at = None
         self._pause_accum = 0
@@ -301,10 +421,8 @@ class JuggleEngine:
         self.head_cm = (0.0, SHOULDER_H + NECK_H + HEAD_H * 0.5)
 
         z_min = WAIST_H - 8.0
-        z_max = SHOULDER_H + NECK_H + HEAD_H + 8.0
-        # Room for toss peaks (height-3 @ ~3 bps peaks ~40cm; leave headroom).
-        if z_max < 85.0:
-            z_max = 85.0
+        # Keep cascade-sized figure; 5-ball peaks use the space above to the frame top.
+        z_max = _LAYOUT_Z_MAX
         x_half = 55.0
 
         scale_z = (self.height * 0.72) / (z_max - z_min)
@@ -333,7 +451,11 @@ class JuggleEngine:
 
     def set_bps(self, bps):
         self.bps = max(0.5, min(8.0, float(bps)))
+        self.bps = _clamp_bps_for_screen(
+            self.bps, self.beats, self.is_sync, self.dwell, self.height
+        )
         self.beat_ms = 1000.0 / self.bps
+        self._layout()
         self._build_schedule()
         self._t0 = _now_ms()
         self._pause_accum = 0
@@ -373,29 +495,167 @@ class JuggleEngine:
             air_beats = _AIR_BEATS_MIN
         return max(1.0, air_beats * unit_ms)
 
+    def _pair_ms(self):
+        """Time between consecutive sync pairs (JL: 2 half-beat units)."""
+        return 2.0 * self.beat_ms if self.is_sync else self.beat_ms
+
     def _build_schedule(self):
         period = len(self.beats)
         if period == 0:
             self.flights = []
             self.hand_segs = {RIGHT: [], LEFT: []}
             self.loop_ms = self.beat_ms
+            self.warmup_ms = 0.0
             return
 
-        cycles = 8
+        cycles = max(48, 16 * period)
         flights = self._resimulate(cycles)
+        self._apply_squeeze(flights)
         self._attach_paths(flights)
         self.flights = flights
-        self.loop_ms = period * self.beat_ms
-        if self.is_sync:
-            # Sync beats are spaced by one full beat_ms in our timeline base.
-            self.loop_ms = period * self.beat_ms
-        if self.loop_ms <= 0:
-            self.loop_ms = self.beat_ms
         ids = set(f["ball"] for f in flights)
         if ids:
             self.num_balls = max(ids) + 1
         else:
             self.num_balls = max(1, average_balls(self.beats, self.is_sync))
+        self._measure_seamless_loop()
+
+    def _apply_squeeze(self, flights):
+        """JL squeezebeats: stagger N>1 airborne catches on the same hand/beat."""
+        if not flights:
+            return
+        step = self._pair_ms()
+        squeeze_ms = _SQUEEZEBEATS * self.beat_ms
+        groups = {}
+        for f in flights:
+            # Bucket by catching hand and nominal catch beat.
+            bi = int(round(f["t1"] / step)) if step > 0 else 0
+            key = (f["hand1"], bi)
+            groups.setdefault(key, []).append(f)
+        for flist in groups.values():
+            n = len(flist)
+            if n < 2:
+                continue
+            flist.sort(key=lambda f: (f["height"], f["t0"], f["ball"]))
+            for i, f in enumerate(flist):
+                f["t1"] = f["t1"] + (i / float(n - 1)) * squeeze_ms
+
+    def _balls_cm_at(self, t_loop, hands_cm=None):
+        """Labeled ball positions in cm at absolute schedule time t_loop."""
+        if hands_cm is None:
+            hands_cm = {
+                RIGHT: self._hand_xz(RIGHT, t_loop),
+                LEFT: self._hand_xz(LEFT, t_loop),
+            }
+        balls = {}
+        for f in self.flights:
+            b = f["ball"]
+            t0, t1 = f["t0"], f["t1"]
+            hold_until = f["hold_until"]
+            if t_loop < t0:
+                continue
+            if t0 <= t_loop <= t1:
+                t = (t_loop - t0) / 1000.0
+                balls[b] = _toss_pos(f["toss"], t)
+            elif t1 < t_loop <= hold_until:
+                balls[b] = hands_cm[f["hand1"]]
+        for bid in range(self.num_balls):
+            if bid in balls:
+                continue
+            best = None
+            for f in self.flights:
+                if f["ball"] != bid:
+                    continue
+                if f["t1"] <= t_loop:
+                    if best is None or f["t1"] > best["t1"]:
+                        best = f
+            if best is not None:
+                balls[bid] = hands_cm[best["hand1"]]
+            else:
+                h = RIGHT if (bid % 2 == 0) else LEFT
+                balls[bid] = hands_cm[h]
+        return balls
+
+    def _state_key(self, t_loop):
+        hands = {
+            RIGHT: self._hand_xz(RIGHT, t_loop),
+            LEFT: self._hand_xz(LEFT, t_loop),
+        }
+        balls = self._balls_cm_at(t_loop, hands)
+        hk = tuple(round(v, 1) for h in (RIGHT, LEFT) for v in hands[h])
+        bk = tuple(
+            (bid, round(balls[bid][0], 1), round(balls[bid][1], 1))
+            for bid in range(self.num_balls)
+            if bid in balls
+        )
+        return hk + bk
+
+    def _all_balls_present(self, t_loop):
+        hands = {
+            RIGHT: self._hand_xz(RIGHT, t_loop),
+            LEFT: self._hand_xz(LEFT, t_loop),
+        }
+        balls = {}
+        for f in self.flights:
+            b = f["ball"]
+            if f["t0"] <= t_loop <= f["hold_until"]:
+                balls[b] = True
+        return len(balls) >= self.num_balls
+
+    def _measure_seamless_loop(self):
+        """Find warmup_ms + loop_ms so labeled state repeats (no teleport wrap)."""
+        step = self._pair_ms()
+        if step <= 0:
+            self.warmup_ms = 0.0
+            self.loop_ms = self.beat_ms
+            return
+
+        # Warmup: first time every ball is in play.
+        warmup = 0.0
+        max_t = 0.0
+        for f in self.flights:
+            if f["hold_until"] > max_t:
+                max_t = f["hold_until"]
+        probe = 0.0
+        found_warm = False
+        while probe <= max_t:
+            if self._all_balls_present(probe):
+                warmup = probe
+                found_warm = True
+                break
+            probe += step * 0.25
+        if not found_warm:
+            warmup = step * float(self.num_balls)
+
+        # Need warmup + loop well inside the schedule (leave ~2 periods of tail).
+        period = max(1, len(self.beats))
+        max_n = max(2 * self.num_balls * period, 4 * period, 12)
+        margin = step * float(2 * period + 2)
+        loop_ms = step * float(period)
+        found = False
+        for n in range(period, max_n + 1):
+            cand = step * float(n)
+            if warmup + cand + margin > max_t:
+                break
+            ok = True
+            for i in range(5):
+                tl = warmup + (0.15 + 0.17 * i) * cand
+                if self._state_key(tl) != self._state_key(tl + cand):
+                    ok = False
+                    break
+            if ok:
+                loop_ms = cand
+                found = True
+                break
+        if not found:
+            # Fallback: 2*balls*period (odd async hand return) or 2*period.
+            n = 2 * max(1, self.num_balls) * period
+            loop_ms = step * float(n)
+            if warmup + loop_ms + margin > max_t:
+                loop_ms = max(step, max_t - warmup - margin)
+
+        self.warmup_ms = warmup
+        self.loop_ms = max(step, loop_ms)
 
     def _resimulate(self, cycles):
         beats = self.beats
@@ -404,6 +664,9 @@ class JuggleEngine:
         hands = {RIGHT: [], LEFT: []}
         next_ball = [0]
         flights = []
+        early_beats = _beats_one_throw_early(self.dwell)
+        early_ms = early_beats * self.beat_ms
+        pair_ms = self._pair_ms()
 
         def acquire(hand_id, t_ms):
             q = hands[hand_id]
@@ -424,13 +687,39 @@ class JuggleEngine:
         def release(hand_id, ball, t_ms):
             hands[hand_id].append((t_ms, ball))
 
+        def emit_toss(hand_id, height, crossing, beat_t):
+            if height == 1:
+                t0 = beat_t - early_ms
+            else:
+                t0 = beat_t
+            ball = acquire(hand_id, t0)
+            dest = (
+                hand_id
+                if not crossing
+                else (LEFT if hand_id == RIGHT else RIGHT)
+            )
+            air_ms = self._air_ms(height, self.beat_ms)
+            land = t0 + air_ms
+            flights.append(
+                {
+                    "ball": ball,
+                    "t0": t0,
+                    "t1": land,
+                    "hand0": hand_id,
+                    "hand1": dest,
+                    "height": height,
+                    "crossing": crossing,
+                }
+            )
+            release(dest, ball, land)
+
         hand = RIGHT
         for cycle in range(cycles):
             for bi, beat in enumerate(beats):
                 gi = cycle * period + bi
                 if self.is_sync:
-                    unit = self.beat_ms / 2.0
-                    t_ms = gi * self.beat_ms
+                    # JL: each sync pair occupies 2 beat-index units at 1/bps each.
+                    beat_t = gi * pair_ms
                     for hand_id, throws in ((RIGHT, beat[1]), (LEFT, beat[2])):
                         for height, crossing in throws:
                             if height == 0:
@@ -444,32 +733,12 @@ class JuggleEngine:
                                 hand_id,
                                 cycles_period,
                             ):
-                                # Hold: ball stays in hand; no TossPath flight.
-                                ball = acquire(hand_id, t_ms)
-                                release(hand_id, ball, t_ms)
+                                ball = acquire(hand_id, beat_t)
+                                release(hand_id, ball, beat_t)
                                 continue
-                            ball = acquire(hand_id, t_ms)
-                            dest = (
-                                hand_id
-                                if not crossing
-                                else (LEFT if hand_id == RIGHT else RIGHT)
-                            )
-                            air_ms = self._air_ms(height, unit)
-                            land = t_ms + air_ms
-                            flights.append(
-                                {
-                                    "ball": ball,
-                                    "t0": t_ms,
-                                    "t1": land,
-                                    "hand0": hand_id,
-                                    "hand1": dest,
-                                    "height": height,
-                                    "crossing": crossing,
-                                }
-                            )
-                            release(dest, ball, land)
+                            emit_toss(hand_id, height, crossing, beat_t)
                 else:
-                    t_ms = gi * self.beat_ms
+                    beat_t = gi * self.beat_ms
                     for height, crossing in beat:
                         if height == 0:
                             continue
@@ -482,25 +751,10 @@ class JuggleEngine:
                             hand,
                             cycles_period,
                         ):
-                            ball = acquire(hand, t_ms)
-                            release(hand, ball, t_ms)
+                            ball = acquire(hand, beat_t)
+                            release(hand, ball, beat_t)
                             continue
-                        ball = acquire(hand, t_ms)
-                        dest = hand if not crossing else (LEFT if hand == RIGHT else RIGHT)
-                        air_ms = self._air_ms(height, self.beat_ms)
-                        land = t_ms + air_ms
-                        flights.append(
-                            {
-                                "ball": ball,
-                                "t0": t_ms,
-                                "t1": land,
-                                "hand0": hand,
-                                "hand1": dest,
-                                "height": height,
-                                "crossing": crossing,
-                            }
-                        )
-                        release(dest, ball, land)
+                        emit_toss(hand, height, crossing, beat_t)
                     hand = LEFT if hand == RIGHT else RIGHT
 
         return flights
@@ -561,8 +815,7 @@ class JuggleEngine:
                     hu = e["t"]
                     break
             if hu is None:
-                unit = self.beat_ms / 2.0 if self.is_sync else self.beat_ms
-                hu = f["t1"] + self.dwell * unit
+                hu = f["t1"] + self.dwell * self.beat_ms
             f["hold_until"] = hu
 
         segs = {RIGHT: [], LEFT: []}
@@ -603,12 +856,9 @@ class JuggleEngine:
         if t_ms is None:
             t_ms = self.elapsed_ms()
         loop = self.loop_ms
+        warm = getattr(self, "warmup_ms", 0.0)
         if loop > 0:
-            span = loop * 4
-            if span > 0:
-                t_loop = (t_ms % span) + loop
-            else:
-                t_loop = t_ms
+            t_loop = warm + (t_ms % loop)
         else:
             t_loop = t_ms
 
@@ -616,37 +866,7 @@ class JuggleEngine:
             RIGHT: self._hand_xz(RIGHT, t_loop),
             LEFT: self._hand_xz(LEFT, t_loop),
         }
-
-        balls = {}
-        for f in self.flights:
-            b = f["ball"]
-            t0, t1 = f["t0"], f["t1"]
-            hold_until = f["hold_until"]
-            if t_loop < t0:
-                continue
-            if t0 <= t_loop <= t1:
-                t = (t_loop - t0) / 1000.0
-                x, z = _toss_pos(f["toss"], t)
-                balls[b] = (x, z)
-            elif t1 < t_loop <= hold_until:
-                # Carry (includes JL hold-2 beats): ball follows catching hand
-                balls[b] = hands_cm[f["hand1"]]
-
-        for bid in range(self.num_balls):
-            if bid in balls:
-                continue
-            best = None
-            for f in self.flights:
-                if f["ball"] != bid:
-                    continue
-                if f["t1"] <= t_loop:
-                    if best is None or f["t1"] > best["t1"]:
-                        best = f
-            if best is not None:
-                balls[bid] = hands_cm[best["hand1"]]
-            else:
-                h = RIGHT if (bid % 2 == 0) else LEFT
-                balls[bid] = hands_cm[h]
+        balls = self._balls_cm_at(t_loop, hands_cm)
 
         balls_px = {}
         for bid, (x, z) in balls.items():
