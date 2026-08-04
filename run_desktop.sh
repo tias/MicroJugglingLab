@@ -61,8 +61,8 @@ echo "MPOS_ROOT=$MPOS_ROOT"
 if [ "${1:-}" = "--launcher" ]; then
   shift
   echo "Starting MicroPythonOS launcher (open Juggle How-To from the menu)."
-  exec sh "$RUNNER" "$@"
+  exec bash "$RUNNER" "$@"
 fi
 
 echo "Starting $APP ..."
-exec sh "$RUNNER" "$APP" "$@"
+exec bash "$RUNNER" "$APP" "$@"
