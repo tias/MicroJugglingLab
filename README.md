@@ -1,10 +1,12 @@
-# MicroJugglingLab (Fri3d Badge 2026)
+# MicroJugglingLab (MicroPythonOS / Fri3d Badge 2026)
 
-**MicroJugglingLab** — animated juggling lessons for [MicroPythonOS](https://micropythonos.com/) on the Fri3d Camp 2026 badge. Lesson order and siteswaps follow [Juggling Lab](https://jugglinglab.org/)’s `basic_how to.jml` beginner list. This is a small MicroPython app with a lightweight siteswap animator — not a port of the full Juggling Lab engine.
+**MicroJugglingLab** — animated juggling lessons for [MicroPythonOS](https://micropythonos.com/), e.g. on the Fri3d Camp 2026 badge. This is a small MicroPython app with a lightweight siteswap animator — not a port of the full [Juggling Lab](https://jugglinglab.org/) engine.
 
-Upstream Juggling Lab (Kotlin) lives in `jugglinglab/` for reference only. Desktop OS checkout lives in `MicroPythonOS/` (gitignored).
+Lesson tracks combine Juggling Lab’s `basic_how to.jml` beginner drills with a filtered set of solo patterns from `basic_solo.jml` (only siteswaps the animator can show without hand-style paths).
 
 ## App
+
+Package id: `org.microjugglinglab.solo` (launcher title: **Juggling**).
 
 ```
 org.microjugglinglab.solo/
@@ -20,7 +22,7 @@ org.microjugglinglab.solo/
 ```
 
 - Main menu with language switch **NL | FR | EN** (default EN), then a lesson track
-- **3-cascade**, **3-Ball Tricks**, **4-fountain**, and **5-cascade** patterns
+- **3-Cascade Step By Step**, **3-Ball Tricks**, **4-Fountain Step By Step**, and **5-Cascade Step By Step**
 - Play / pause, ± playback speed, back
 - Designed for ~320×240 touch UI
 
@@ -88,7 +90,11 @@ Details: [Bundling Apps](https://docs.micropythonos.com/apps/bundling-apps/), [B
 
 ## Attribution
 
-The MicroPythonOS app in `org.microjugglinglab.solo/` is based on [Juggling Lab](https://jugglinglab.org/) by Jack Boyce and contributors. Its How to Juggle lessons and siteswap strings come from `patterns/basic_how to.jml`; the animator was designed with reference to Juggling Lab’s GPL sources. This is a new MicroPython/LVGL implementation for the Fri3d Badge (not a port of the full Kotlin engine). Licensed under GPL-2.0, the same as Juggling Lab.
+The MicroPythonOS app in `org.microjugglinglab.solo/` is inspired by [Juggling Lab](https://jugglinglab.org/) by Jack Boyce and contributors. How-to lesson order and many siteswaps come from `patterns/basic_how to.jml`; 3-Ball Tricks draw from `patterns/basic_solo.jml`. The animator was designed after inspecting Juggling Lab’s GPL sources. This is a new MicroPython/LVGL implementation (not a port of the full Kotlin engine). Licensed under GPL-2.0, the same as Juggling Lab.
+
+Repo: [github.com/tias/MicroJugglingLab](https://github.com/tias/MicroJugglingLab).
+
+Nearly all code is (carefully) prompted.
 
 ## License
 

@@ -22,9 +22,9 @@ _current = None
 
 STRINGS = {
     "app_title": {
-        "nl": "MicroJugglingLab",
-        "fr": "MicroJugglingLab",
-        "en": "MicroJugglingLab",
+        "nl": "Juggling",
+        "fr": "Juggling",
+        "en": "Juggling",
     },
     "tagline": {
         "nl": "Kies een taal en een lesreeks",

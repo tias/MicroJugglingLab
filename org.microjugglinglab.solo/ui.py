@@ -10,8 +10,8 @@ ACCENT = 0x3A6EA5
 TEXT = 0xF0F0F0
 MUTED = 0x8890A0
 
-TAB_H = 28
-TITLE_Y = 34
+TAB_H = 32
+TITLE_Y = 38
 
 
 def make_screen():
@@ -91,7 +91,7 @@ def make_title(parent, y=TITLE_Y, font_size=16):
     return title
 
 
-def make_subtitle(parent, y=54):
+def make_subtitle(parent, y=58):
     lbl = lv.label(parent)
     lbl.set_style_text_color(lv.color_hex(MUTED), 0)
     lbl.set_long_mode(lv.label.LONG_MODE.WRAP)
