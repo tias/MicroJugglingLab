@@ -36,23 +36,25 @@ _HAND = 0xE8C080
 _HAND_DEPTH_CM = 30.0
 
 
-def _elbow(sx, sy, hx, hy, upper_len, lower_len, scale):
-    """Two-bone IK matching JL Avatar.elbow (render space: +Y up, +Z depth)."""
+def _elbow(sx, sy, hx, hy, upper_len, lower_len, scale, out):
+    """Two-bone IK matching JL Avatar.elbow. Writes [ex, ey] into out."""
     depth = _HAND_DEPTH_CM * scale
     # Screen (+y down) → render (+y up); hand has juggling-plane depth.
-    s = (sx, -sy, 0.0)
-    h = (hx, -hy, depth)
-    dx = h[0] - s[0]
-    dy = h[1] - s[1]
-    dz = h[2] - s[2]
+    dx = hx - sx
+    dy = (-hy) - (-sy)
+    dz = depth
     D = math.sqrt(dx * dx + dy * dy + dz * dz)
     U = upper_len
     L = lower_len
     if D < 1e-6:
-        return (sx, sy)
+        out[0] = sx
+        out[1] = sy
+        return out
     if D > U + L - 1e-6:
         f = U / D
-        return (sx + (hx - sx) * f, sy + (hy - sy) * f)
+        out[0] = sx + (hx - sx) * f
+        out[1] = sy + (hy - sy) * f
+        return out
 
     uu_ll_dd = U * U + L * L - D * D
     radicand = (4.0 * U * U * L * L - uu_ll_dd * uu_ll_dd) / (4.0 * D * D)
@@ -73,10 +75,10 @@ def _elbow(sx, sy, hx, hy, upper_len, lower_len, scale):
         adj = 2.5
     elif adj < -1.5:
         adj = -1.5
-    ex = s[0] + along * dx * adj
-    ey_up = s[1] + along * dy - r * math.cos(alpha)
-    # discard depth for 2D draw
-    return (ex, -ey_up)
+    out[0] = sx + along * dx * adj
+    # discard depth for 2D draw; convert render +y up back to screen +y down
+    out[1] = -((-sy) + along * dy - r * math.cos(alpha))
+    return out
 
 
 class Animator(Activity):
@@ -90,6 +92,18 @@ class Animator(Activity):
         self.play_lbl = None
         self._cw = 320
         self._ch = 180
+        # Reusable LVGL point buffers (avoid per-frame list/dict allocs)
+        self._pt0 = {"x": 0, "y": 0}
+        self._pt1 = {"x": 0, "y": 0}
+        self._pts = [self._pt0, self._pt1]
+        self._pts_t = None  # lv.point_t pair if dict form unsupported
+        self._elbow_r = [0.0, 0.0]
+        self._elbow_l = [0.0, 0.0]
+        # Dirty caches: skip LVGL calls when int pixels unchanged
+        self._line_xy = {}  # id(line) -> (x0, y0, x1, y1)
+        self._pos_xy = {}  # id(obj) -> (x, y)
+        self._ball_vis = []  # last HIDDEN state per ball
+        self._torso_drawn = False
 
     def onCreate(self):
         intent = self.getIntent()
@@ -251,6 +265,7 @@ class Animator(Activity):
             w = 200
         if h < 40:
             h = 180
+        size_changed = abs(w - self._cw) > 1 or abs(h - self._ch) > 1
         self._cw = w
         self._ch = h
         if self.engine is None:
@@ -258,10 +273,21 @@ class Animator(Activity):
                 self._pattern, bps=self._bps, width=w, height=h
             )
             self._make_balls(self.engine.num_balls)
-        else:
+            self._invalidate_static()
+        elif size_changed:
             self.engine.width = w
             self.engine.height = h
             self.engine._layout()
+            self._invalidate_static()
+        if not self._torso_drawn:
+            self._draw_torso_static()
+
+    def _invalidate_static(self):
+        """Layout/body changed — redraw torso once and clear dirty caches."""
+        self._torso_drawn = False
+        self._line_xy.clear()
+        self._pos_xy.clear()
+        self._ball_vis = [None] * len(self.ball_objs)
 
     def _make_balls(self, n):
         for o in self.ball_objs:
@@ -270,6 +296,7 @@ class Animator(Activity):
             except Exception:
                 pass
         self.ball_objs = []
+        self._ball_vis = []
         r = 7
         for i in range(n):
             b = lv.obj(self.stage)
@@ -285,6 +312,7 @@ class Animator(Activity):
             except Exception:
                 pass
             self.ball_objs.append(b)
+            self._ball_vis.append(None)
 
     def _start_timer(self):
         self._stop_timer()
@@ -303,63 +331,108 @@ class Animator(Activity):
             return
         if self.engine is None:
             return
-        st = self.engine.state_at()
-        self._draw_state(st)
+        if not self._torso_drawn:
+            self._draw_torso_static()
+        self.engine.state_at()
+        self._draw_moving()
 
     def _set_line(self, line, x0, y0, x1, y1):
+        ix0, iy0, ix1, iy1 = int(x0), int(y0), int(x1), int(y1)
+        key = id(line)
+        prev = self._line_xy.get(key)
+        if prev is not None and prev[0] == ix0 and prev[1] == iy0 and prev[2] == ix1 and prev[3] == iy1:
+            return
+        self._line_xy[key] = (ix0, iy0, ix1, iy1)
+        if self._pts_t is not None:
+            p0, p1 = self._pts_t
+            p0.x = ix0
+            p0.y = iy0
+            p1.x = ix1
+            p1.y = iy1
+            line.set_points(self._pts_t, 2)
+            return
+        p0, p1 = self._pt0, self._pt1
+        p0["x"] = ix0
+        p0["y"] = iy0
+        p1["x"] = ix1
+        p1["y"] = iy1
         try:
-            line.set_points(
-                [{"x": int(x0), "y": int(y0)}, {"x": int(x1), "y": int(y1)}], 2
-            )
+            line.set_points(self._pts, 2)
         except TypeError:
-            line.set_points(
-                [
-                    lv.point_t({"x": int(x0), "y": int(y0)}),
-                    lv.point_t({"x": int(x1), "y": int(y1)}),
-                ],
-                2,
-            )
+            self._pts_t = [
+                lv.point_t({"x": ix0, "y": iy0}),
+                lv.point_t({"x": ix1, "y": iy1}),
+            ]
+            line.set_points(self._pts_t, 2)
 
-    def _draw_state(self, st):
-        hx_r, hy_r = st["hands"][RIGHT]
-        hx_l, hy_l = st["hands"][LEFT]
-        sr = st["shoulders"][RIGHT]
-        sl = st["shoulders"][LEFT]
-        wr = st["waist"][RIGHT]
-        wl = st["waist"][LEFT]
-        hx, hy = st["head"]
-        scale = st.get("scale") or 1.0
+    def _set_pos(self, obj, x, y):
+        ix, iy = int(x), int(y)
+        key = id(obj)
+        prev = self._pos_xy.get(key)
+        if prev is not None and prev[0] == ix and prev[1] == iy:
+            return
+        self._pos_xy[key] = (ix, iy)
+        obj.set_pos(ix, iy)
 
-        # Head
-        self.head_obj.set_pos(int(hx - 9), int(hy - 9))
+    def _set_ball_vis(self, i, visible):
+        if i < len(self._ball_vis) and self._ball_vis[i] == visible:
+            return
+        if i < len(self._ball_vis):
+            self._ball_vis[i] = visible
+        obj = self.ball_objs[i]
+        if visible:
+            obj.remove_flag(lv.obj.FLAG.HIDDEN)
+        else:
+            obj.add_flag(lv.obj.FLAG.HIDDEN)
 
-        # Torso quad: L-shoulder → R-shoulder → R-waist → L-waist
+    def _draw_torso_static(self):
+        """Head + torso once after layout — not every animation tick."""
+        e = self.engine
+        if e is None:
+            return
+        sr = e.shoulders[RIGHT]
+        sl = e.shoulders[LEFT]
+        wr = e.waist[RIGHT]
+        wl = e.waist[LEFT]
+        hx, hy = e.head
+        self._set_pos(self.head_obj, hx - 9, hy - 9)
         self._set_line(self.torso_top, sl[0], sl[1], sr[0], sr[1])
         self._set_line(self.torso_r, sr[0], sr[1], wr[0], wr[1])
         self._set_line(self.torso_bot, wr[0], wr[1], wl[0], wl[1])
         self._set_line(self.torso_l, wl[0], wl[1], sl[0], sl[1])
+        self._torso_drawn = True
+
+    def _draw_moving(self):
+        """Arms, hands, balls — only LVGL updates when int pixels change."""
+        e = self.engine
+        hx_r = e._hand_x[RIGHT]
+        hy_r = e._hand_y[RIGHT]
+        hx_l = e._hand_x[LEFT]
+        hy_l = e._hand_y[LEFT]
+        sr = e.shoulders[RIGHT]
+        sl = e.shoulders[LEFT]
+        scale = e.scale or 1.0
 
         u_len = UPPER_ARM_LENGTH * scale
         l_len = LOWER_ARM_LENGTH * scale
-        er = _elbow(sr[0], sr[1], hx_r, hy_r, u_len, l_len, scale)
-        el = _elbow(sl[0], sl[1], hx_l, hy_l, u_len, l_len, scale)
+        er = _elbow(sr[0], sr[1], hx_r, hy_r, u_len, l_len, scale, self._elbow_r)
+        el = _elbow(sl[0], sl[1], hx_l, hy_l, u_len, l_len, scale, self._elbow_l)
 
         self._set_line(self.arm_ru, sr[0], sr[1], er[0], er[1])
         self._set_line(self.arm_rl, er[0], er[1], hx_r, hy_r)
         self._set_line(self.arm_lu, sl[0], sl[1], el[0], el[1])
         self._set_line(self.arm_ll, el[0], el[1], hx_l, hy_l)
 
-        self.hand_r.set_pos(int(hx_r - 5), int(hy_r - 5))
-        self.hand_l.set_pos(int(hx_l - 5), int(hy_l - 5))
+        self._set_pos(self.hand_r, hx_r - 5, hy_r - 5)
+        self._set_pos(self.hand_l, hx_l - 5, hy_l - 5)
 
-        balls = st["balls"]
+        n = e.num_balls
         for i, obj in enumerate(self.ball_objs):
-            if i in balls:
-                x, y = balls[i]
-                obj.remove_flag(lv.obj.FLAG.HIDDEN)
-                obj.set_pos(int(x - 7), int(y - 7))
+            if i < n and e._ball_on[i]:
+                self._set_ball_vis(i, True)
+                self._set_pos(obj, e._ball_x[i] - 7, e._ball_y[i] - 7)
             else:
-                obj.add_flag(lv.obj.FLAG.HIDDEN)
+                self._set_ball_vis(i, False)
 
     def _on_back(self):
         self.finish()

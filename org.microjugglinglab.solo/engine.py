@@ -411,6 +411,18 @@ class JuggleEngine:
         self.playing = True
         self._layout()
         self._build_schedule()
+        self._ensure_frame_bufs()
+
+    def _ensure_frame_bufs(self):
+        """Reusable per-frame output — avoids allocating every tick."""
+        n = max(1, self.num_balls)
+        if getattr(self, "_ball_x", None) is not None and len(self._ball_x) == n:
+            return
+        self._hand_x = [0.0, 0.0]
+        self._hand_y = [0.0, 0.0]
+        self._ball_x = [0.0] * n
+        self._ball_y = [0.0] * n
+        self._ball_on = [False] * n
 
     def _layout(self):
         """Body anchors in cm + affine map so the figure fills ~70% of the stage."""
@@ -452,6 +464,10 @@ class JuggleEngine:
 
     def to_screen(self, x, z):
         return (self.origin_x + x * self.scale, self.origin_y - z * self.scale)
+
+    def _to_screen_xy(self, x, z):
+        """Screen map without allocating a tuple."""
+        return self.origin_x + x * self.scale, self.origin_y - z * self.scale
 
     def set_bps(self, bps):
         self.bps = max(0.5, min(8.0, float(bps)))
@@ -554,6 +570,7 @@ class JuggleEngine:
         self._index_flights()
         self._measure_seamless_loop()
         self._prune_to_loop()
+        self._ensure_frame_bufs()
         try:
             import gc
 
@@ -983,8 +1000,10 @@ class JuggleEngine:
         return (x, z)
 
     def state_at(self, t_ms=None):
+        """Fill reusable frame buffers (hand_*/ball_*). Returns self — no per-tick dicts."""
         if t_ms is None:
             t_ms = self.elapsed_ms()
+        self._ensure_frame_bufs()
         loop = self.loop_ms
         warm = getattr(self, "warmup_ms", 0.0)
         if loop > 0:
@@ -992,28 +1011,32 @@ class JuggleEngine:
         else:
             t_loop = t_ms
 
-        hands_cm = {
-            RIGHT: self._hand_xz(RIGHT, t_loop),
-            LEFT: self._hand_xz(LEFT, t_loop),
-        }
-        balls = self._balls_cm_at(t_loop, hands_cm)
+        ox, oy, sc = self.origin_x, self.origin_y, self.scale
+        rx, rz = self._hand_xz(RIGHT, t_loop)
+        lx, lz = self._hand_xz(LEFT, t_loop)
+        self._hand_x[RIGHT] = ox + rx * sc
+        self._hand_y[RIGHT] = oy - rz * sc
+        self._hand_x[LEFT] = ox + lx * sc
+        self._hand_y[LEFT] = oy - lz * sc
 
-        balls_px = {}
-        for bid, (x, z) in balls.items():
-            balls_px[bid] = self.to_screen(x, z * _BALL_Z_BOOST)
+        n = self.num_balls
+        for bid in range(n):
+            self._ball_on[bid] = False
+        for bid in range(n):
+            f = self._ball_flight_at(bid, t_loop)
+            if f is None:
+                h = RIGHT if (bid % 2 == 0) else LEFT
+                bx = rx if h == RIGHT else lx
+                bz = rz if h == RIGHT else lz
+            elif t_loop <= f["t1"]:
+                bx, bz = _toss_pos(f["toss"], (t_loop - f["t0"]) / 1000.0)
+            else:
+                h = f["hand1"]
+                bx = rx if h == RIGHT else lx
+                bz = rz if h == RIGHT else lz
+            self._ball_on[bid] = True
+            self._ball_x[bid] = ox + bx * sc
+            self._ball_y[bid] = oy - (bz * _BALL_Z_BOOST) * sc
 
-        return {
-            "balls": balls_px,
-            "hands": {
-                RIGHT: self.to_screen(*hands_cm[RIGHT]),
-                LEFT: self.to_screen(*hands_cm[LEFT]),
-            },
-            "shoulders": self.shoulders,
-            "waist": self.waist,
-            "head": self.head,
-            "body": self.body,
-            "floor_y": self.floor_y,
-            "t": t_ms,
-            # cm scale so avatar IK uses matching arm lengths in px
-            "scale": self.scale,
-        }
+        self._frame_t = t_ms
+        return self
