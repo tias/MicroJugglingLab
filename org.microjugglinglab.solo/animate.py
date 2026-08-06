@@ -357,7 +357,7 @@ class Animator(Activity):
         self.engine.toggle()
         if self.play_lbl:
             key = "pause" if self.engine.playing else "play"
-            self.play_lbl.set_text(t(key, self._lang))
+            U.set_tab_label(self.play_lbl, t(key, self._lang))
 
     def _on_slower(self):
         if self.engine is None:

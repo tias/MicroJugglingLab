@@ -5,13 +5,16 @@ import lvgl as lv
 BG = 0x12161F
 PANEL = 0x1A2030
 BTN = 0x2A3348
-TAB_IDLE = 0x252B38
+TAB_BAR = 0x252B38
+TAB_IDLE = 0x2A3348
+TAB_ACTIVE = 0x4A90D9
 ACCENT = 0x3A6EA5
 TEXT = 0xF0F0F0
 MUTED = 0x8890A0
 
 TAB_H = 32
 TITLE_Y = 38
+TAB_UNDERLINE = 3
 
 
 def make_screen():
@@ -29,7 +32,7 @@ def make_tab_bar(parent, align_bottom=False):
         bar.align(lv.ALIGN.BOTTOM_MID, 0, 0)
     else:
         bar.align(lv.ALIGN.TOP_MID, 0, 0)
-    bar.set_style_bg_color(lv.color_hex(TAB_IDLE), 0)
+    bar.set_style_bg_color(lv.color_hex(TAB_BAR), 0)
     bar.set_style_border_width(0, 0)
     bar.set_style_radius(0, 0)
     bar.set_style_pad_all(0, 0)
@@ -56,7 +59,10 @@ def make_tab_btn(bar, text, cb, width_pct=None, active=False):
     btn.set_style_radius(0, 0)
     btn.set_style_shadow_width(0, 0)
     btn.set_style_pad_all(0, 0)
-    btn.set_style_bg_color(lv.color_hex(ACCENT if active else TAB_IDLE), 0)
+    try:
+        btn.set_style_border_side(lv.BORDER_SIDE.BOTTOM, 0)
+    except Exception:
+        pass
     # Avoid click-focus so returning from a child activity does not
     # scroll_to_view a focused control inside a scrollable parent.
     try:
@@ -66,13 +72,36 @@ def make_tab_btn(bar, text, cb, width_pct=None, active=False):
     if cb is not None:
         btn.add_event_cb(lambda e, c=cb: c(), lv.EVENT.CLICKED, None)
     lbl = lv.label(btn)
-    lbl.set_text(text)
+    try:
+        lbl.set_style_text_font(lv.font_montserrat_16, 0)
+    except Exception:
+        pass
+    set_tab_label(lbl, text)
     lbl.center()
+    set_tab_active(btn, active)
     return btn, lbl
 
 
+def set_tab_label(lbl, text):
+    """Top-bar labels: always uppercase for readability on small LCDs."""
+    lbl.set_text(str(text).upper())
+
+
 def set_tab_active(btn, active):
-    btn.set_style_bg_color(lv.color_hex(ACCENT if active else TAB_IDLE), 0)
+    btn.set_style_bg_color(lv.color_hex(TAB_ACTIVE if active else TAB_IDLE), 0)
+    if active:
+        btn.set_style_border_width(TAB_UNDERLINE, 0)
+        btn.set_style_border_color(lv.color_hex(TEXT), 0)
+    else:
+        btn.set_style_border_width(0, 0)
+    try:
+        lbl = btn.get_child(0)
+        if lbl is not None:
+            lbl.set_style_text_color(
+                lv.color_hex(TEXT if active else MUTED), 0
+            )
+    except Exception:
+        pass
 
 
 def make_title(parent, y=TITLE_Y, font_size=16):
