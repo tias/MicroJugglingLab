@@ -41,10 +41,9 @@ class SectionLessons(Activity):
         self._scroll_y = 0
         for lesson in section["lessons"]:
             loc = localize_lesson(lesson, lang)
-            label = "%s  (%s)" % (loc["name"], loc["pattern"])
             U.make_row_btn(
                 body,
-                label,
+                loc["name"],
                 lambda les=lesson, lg=lang: self._open_lesson(les, lg),
             )
 

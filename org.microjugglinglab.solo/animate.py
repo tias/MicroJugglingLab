@@ -86,7 +86,6 @@ class Animator(Activity):
         self.timer = None
         self.ball_objs = []
         self.title_lbl = None
-        self.pattern_lbl = None
         self.play_btn = None
         self.play_lbl = None
         self._cw = 320
@@ -146,9 +145,6 @@ class Animator(Activity):
 
         self.title_lbl = U.make_side_label(left, muted=False, font_size=14)
         self.title_lbl.set_text(title)
-
-        self.pattern_lbl = U.make_side_label(left, muted=True, font_size=14)
-        self.pattern_lbl.set_text("%s  |  1.0x" % pattern)
 
         if tip:
             tip_lbl = U.make_side_label(left, muted=True, font_size=14)
@@ -363,14 +359,8 @@ class Animator(Activity):
         if self.engine is None:
             return
         self.engine.set_playback_rate(self.engine.playback_rate - 0.25)
-        self.pattern_lbl.set_text(
-            "%s  |  %.2gx" % (self._pattern, self.engine.playback_rate)
-        )
 
     def _on_faster(self):
         if self.engine is None:
             return
         self.engine.set_playback_rate(self.engine.playback_rate + 0.25)
-        self.pattern_lbl.set_text(
-            "%s  |  %.2gx" % (self._pattern, self.engine.playback_rate)
-        )
