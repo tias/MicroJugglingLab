@@ -124,16 +124,16 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "1hoog-2hoog A (kolommen)",
-                    "fr": "1Up-2Up A (colonnes)",
-                    "en": "1Up-2Up A (Columns)",
+                    "nl": "1hoog-2hoog A",
+                    "fr": "1Up-2Up A",
+                    "en": "1Up-2Up A",
                 },
                 "pattern": "(4,0)(4,4)",
                 "bps": 4.0,
                 "tip": {
-                    "nl": "Een bal omhoog, dan twee samen - kolommen-ritme.",
-                    "fr": "Une balle en haut, puis deux ensemble - rythme colonnes.",
-                    "en": "One ball up, then two together - columns rhythm.",
+                    "nl": "Een bal omhoog, dan twee samen - 1hoog-2hoog-ritme.",
+                    "fr": "Une balle en haut, puis deux ensemble - rythme 1Up-2Up.",
+                    "en": "One ball up, then two together - 1Up-2Up rhythm.",
                 },
             },
             {
@@ -145,9 +145,9 @@ SECTIONS = [
                 "pattern": "(4,4)(4x,0)(4,4)(0,4x)",
                 "bps": 4.0,
                 "tip": {
-                    "nl": "Kolommen met wisselende kruisworpen.",
-                    "fr": "Colonnes avec lancers croises alternes.",
-                    "en": "Columns with alternating crossing throws.",
+                    "nl": "Fontein met wisselende kruisworpen.",
+                    "fr": "Fontaine avec lancers croises alternes.",
+                    "en": "Fountain with alternating crossing throws.",
                 },
             },
             {
@@ -226,9 +226,9 @@ SECTIONS = [
                 "pattern": "40",
                 "bps": 3.8,
                 "tip": {
-                    "nl": "Twee ballen alleen in de rechterhand (kolommen).",
-                    "fr": "Deux balles dans la main droite seulement (colonnes).",
-                    "en": "Two balls in the right hand only (columns).",
+                    "nl": "Twee ballen alleen in de rechterhand (circulair).",
+                    "fr": "Deux balles dans la main droite seulement (circulaire).",
+                    "en": "Two balls in the right hand only (circular).",
                 },
             },
             {
@@ -254,9 +254,9 @@ SECTIONS = [
                 "pattern": "4",
                 "bps": 3.8,
                 "tip": {
-                    "nl": "Asynchrone fontein: even worpen, kolommen in dezelfde hand.",
-                    "fr": "Fontaine async: lancers pairs, colonnes dans la meme main.",
-                    "en": "Async fountain: even throws, same-hand columns.",
+                    "nl": "Asynchrone fontein: even worpen, circulaire banen in dezelfde hand.",
+                    "fr": "Fontaine async: lancers pairs, arcs circulaires dans la meme main.",
+                    "en": "Async fountain: even throws, circular paths in the same hand.",
                 },
             },
         ],

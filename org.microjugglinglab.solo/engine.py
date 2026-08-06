@@ -903,15 +903,9 @@ class JuggleEngine:
     def _attach_paths(self, flights):
         """TossPath coeffs, hold_until, and per-hand Hermite carry segments."""
         for f in flights:
+            # JL same-hand: throw near midline, catch further out → circular fountain.
             x0, z0 = throw_xz(f["hand0"], f["height"], f["crossing"])
             x1, z1 = catch_xz(f["hand1"], f["height"])
-            # Same-hand (even) throws: straight up/down columns.
-            # Solo sync throw (other hand empty) → center; else → shoulder width.
-            if f["hand0"] == f["hand1"] and not f["crossing"]:
-                if f.get("solo"):
-                    x0 = x1 = 0.0
-                else:
-                    x0 = x1 = _hand_sign(f["hand0"]) * SHOULDER_HW
             T = max(1e-4, (f["t1"] - f["t0"]) / 1000.0)
             f["x0"] = x0
             f["z0"] = z0
