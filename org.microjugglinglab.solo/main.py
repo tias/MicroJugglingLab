@@ -14,6 +14,8 @@ class MainMenu(Activity):
         self._title = None
         self._lang_btns = {}
         self._section_lbls = []
+        self._section_btns = {}
+        self._scroll = U.ScrollKeeper()
 
     def onCreate(self):
         get_lang()
@@ -33,7 +35,10 @@ class MainMenu(Activity):
         self._title = U.make_title(screen)
 
         body = U.make_panel(screen, height_pct=68, scrollable=True)
+        self._scroll.bind(body)
         self._section_lbls = []
+        self._section_btns = {}
+        first_row = None
         for section in SECTIONS:
             btn, lbl = U.make_row_btn(
                 body,
@@ -41,14 +46,21 @@ class MainMenu(Activity):
                 lambda sid=section["id"]: self._open_section(sid),
             )
             self._section_lbls.append((lbl, section))
-            _ = btn
+            self._section_btns[section["id"]] = btn
+            if first_row is None:
+                first_row = btn
 
+        self._scroll.set_default_row(first_row)
         self._refresh_texts()
         self.setContentView(screen)
+        U.focus_widget(first_row)
 
     def onResume(self, screen):
         super().onResume(screen)
         self._refresh_texts()
+        # After Back from a section, MPOS focus restore can scroll_to_view the
+        # list to the wrong place — put scroll back and re-show the cursor.
+        self._scroll.restore()
 
     def _on_lang(self, code):
         set_lang(code)
@@ -72,6 +84,7 @@ class MainMenu(Activity):
                 lbl.set_text(localize_section_title(section, lang))
 
     def _open_section(self, section_id):
+        self._scroll.save(self._section_btns.get(section_id))
         intent = Intent(activity_class=SectionLessons)
         intent.putExtra("section_id", section_id)
         intent.putExtra("lang", get_lang())

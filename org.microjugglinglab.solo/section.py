@@ -1,5 +1,6 @@
 # Per-section lesson list — same chrome as main menu.
 
+import lvgl as lv
 from mpos import Activity, Intent
 
 from i18n import get_lang, t
@@ -11,8 +12,7 @@ import ui as U
 class SectionLessons(Activity):
     def __init__(self):
         super().__init__()
-        self._body = None
-        self._scroll_y = 0
+        self._scroll = U.ScrollKeeper()
 
     def onCreate(self):
         intent = self.getIntent()
@@ -37,42 +37,32 @@ class SectionLessons(Activity):
             title.set_text(localize_section_title(section, lang))
 
         body = U.make_panel(screen, height_pct=68, scrollable=True)
-        self._body = body
-        self._scroll_y = 0
+        self._scroll.bind(body)
+        first_row = None
         for lesson in section["lessons"]:
             loc = localize_lesson(lesson, lang)
-            U.make_row_btn(
-                body,
-                loc["name"],
-                lambda les=lesson, lg=lang: self._open_lesson(les, lg),
+            # Placeholder cb; wired below once btn exists.
+            btn, _lbl = U.make_row_btn(body, loc["name"], None)
+            btn.add_event_cb(
+                lambda e, les=lesson, lg=lang, b=btn: self._open_lesson(les, lg, b),
+                lv.EVENT.CLICKED,
+                None,
             )
+            if first_row is None:
+                first_row = btn
 
+        self._scroll.set_default_row(first_row)
         self.setContentView(screen)
+        U.focus_widget(first_row)
 
     def onResume(self, screen):
         super().onResume(screen)
         # MPOS restores keypad focus after Back; that scroll_to_view's the
-        # focused lesson and can yank the list to the bottom. Put scroll back.
-        self._restore_scroll()
+        # focused lesson and can yank the list. Put scroll back and re-show cursor.
+        self._scroll.restore()
 
-    def _save_scroll(self):
-        if self._body is None:
-            return
-        try:
-            self._scroll_y = self._body.get_scroll_y()
-        except Exception:
-            self._scroll_y = 0
-
-    def _restore_scroll(self):
-        if self._body is None:
-            return
-        try:
-            self._body.scroll_to_y(self._scroll_y, False)
-        except Exception:
-            pass
-
-    def _open_lesson(self, lesson, lang):
-        self._save_scroll()
+    def _open_lesson(self, lesson, lang, btn=None):
+        self._scroll.save(btn)
         loc = localize_lesson(lesson, lang)
         intent = Intent(activity_class=Animator)
         intent.putExtra("title", loc["name"])

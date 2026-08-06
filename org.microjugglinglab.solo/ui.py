@@ -2,6 +2,16 @@
 
 import lvgl as lv
 
+try:
+    from mpos import add_focus_highlight
+except ImportError:
+    add_focus_highlight = None
+
+try:
+    from mpos.ui.focus import enable_focus_borders
+except ImportError:
+    enable_focus_borders = None
+
 BG = 0x12161F
 PANEL = 0x1A2030
 BTN = 0x2A3348
@@ -14,7 +24,133 @@ MUTED = 0x8890A0
 
 TAB_H = 32
 TITLE_Y = 38
-TAB_UNDERLINE = 3
+FOCUS_BORDER_W = 3
+
+
+def _paint_focus_border(widget):
+    if widget is None:
+        return
+    try:
+        widget.set_style_border_color(lv.color_hex(TEXT), lv.PART.MAIN)
+        widget.set_style_border_width(FOCUS_BORDER_W, lv.PART.MAIN)
+    except Exception:
+        try:
+            widget.set_style_border_color(lv.color_hex(TEXT), 0)
+            widget.set_style_border_width(FOCUS_BORDER_W, 0)
+        except Exception:
+            pass
+
+
+def _enable_focus_cursor(widget):
+    """MPOS keypad/joystick focus ring (visible after directional navigation)."""
+    if add_focus_highlight is None:
+        return
+    try:
+        add_focus_highlight(
+            widget, width=FOCUS_BORDER_W, color=lv.color_hex(TEXT), radius=0
+        )
+    except Exception:
+        pass
+
+
+def show_focus_cursor(widget=None):
+    """Put keypad focus on `widget` and paint the ring.
+
+    When `widget` is given it always wins (do not keep a stray top-bar focus).
+    When omitted, uses the group's current focused object.
+    """
+    if enable_focus_borders is not None:
+        try:
+            enable_focus_borders()
+        except Exception:
+            pass
+    if widget is None:
+        try:
+            group = lv.group_get_default()
+            widget = group.get_focused() if group else None
+        except Exception:
+            widget = None
+    if widget is None:
+        return
+    try:
+        lv.group_focus_obj(widget)
+    except Exception:
+        pass
+    _paint_focus_border(widget)
+
+
+def focus_widget(widget):
+    """Focus widget and show the keypad cursor immediately (cold start)."""
+    show_focus_cursor(widget)
+
+
+class ScrollKeeper:
+    """Remember list scroll + which body row to focus across child activities.
+
+    On Back: restore scroll and force focus onto the previously selected
+    non-top-bar row (or the screen's default first row). MPOS often leaves
+    focus on a top-bar control; we override that.
+    """
+
+    def __init__(self):
+        self.body = None
+        self.y = 0
+        self._timer = None
+        self._focus_row = None
+        self._default_row = None
+
+    def bind(self, body, default_row=None):
+        self.body = body
+        self.y = 0
+        self._focus_row = None
+        self._default_row = default_row
+
+    def set_default_row(self, row):
+        self._default_row = row
+
+    def save(self, focus_row=None):
+        if focus_row is not None:
+            self._focus_row = focus_row
+        if self.body is None:
+            return
+        try:
+            self.y = self.body.get_scroll_y()
+        except Exception:
+            self.y = 0
+
+    def restore(self):
+        self._apply()
+        self._cancel_timer()
+        try:
+            self._timer = lv.timer_create(self._deferred, 80, None)
+            self._timer.set_repeat_count(1)
+        except Exception:
+            self._timer = None
+
+    def _target_row(self):
+        return self._focus_row if self._focus_row is not None else self._default_row
+
+    def _apply(self):
+        if self.body is None:
+            return
+        try:
+            self.body.scroll_to_y(self.y, False)
+        except Exception:
+            pass
+        show_focus_cursor(self._target_row())
+
+    def _deferred(self, _t):
+        self._timer = None
+        self._apply()
+
+    def _cancel_timer(self):
+        if self._timer is None:
+            return
+        try:
+            self._timer.delete()
+        except Exception:
+            pass
+        self._timer = None
 
 
 def make_screen():
@@ -59,10 +195,6 @@ def make_tab_btn(bar, text, cb, width_pct=None, active=False):
     btn.set_style_radius(0, 0)
     btn.set_style_shadow_width(0, 0)
     btn.set_style_pad_all(0, 0)
-    try:
-        btn.set_style_border_side(lv.BORDER_SIDE.BOTTOM, 0)
-    except Exception:
-        pass
     # Avoid click-focus so returning from a child activity does not
     # scroll_to_view a focused control inside a scrollable parent.
     try:
@@ -79,21 +211,19 @@ def make_tab_btn(bar, text, cb, width_pct=None, active=False):
     set_tab_label(lbl, text)
     lbl.center()
     set_tab_active(btn, active)
+    _enable_focus_cursor(btn)
     return btn, lbl
 
 
 def set_tab_label(lbl, text):
-    """Top-bar labels: always uppercase for readability on small LCDs."""
-    lbl.set_text(str(text).upper())
+    """Set top-bar label text (normal i18n casing)."""
+    lbl.set_text(str(text))
 
 
 def set_tab_active(btn, active):
+    # Fill + text only — border is reserved for the MPOS keypad focus cursor.
     btn.set_style_bg_color(lv.color_hex(TAB_ACTIVE if active else TAB_IDLE), 0)
-    if active:
-        btn.set_style_border_width(TAB_UNDERLINE, 0)
-        btn.set_style_border_color(lv.color_hex(TEXT), 0)
-    else:
-        btn.set_style_border_width(0, 0)
+    btn.set_style_border_width(0, 0)
     try:
         lbl = btn.get_child(0)
         if lbl is not None:
@@ -191,4 +321,5 @@ def make_row_btn(parent, text, cb, height=48):
     except Exception:
         pass
     lbl.center()
+    _enable_focus_cursor(btn)
     return btn, lbl

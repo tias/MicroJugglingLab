@@ -107,7 +107,7 @@ class Animator(Activity):
         screen = U.make_screen()
 
         top = U.make_tab_bar(screen)
-        U.make_tab_btn(
+        back_btn, _back_lbl = U.make_tab_btn(
             top, t("back", self._lang), self._on_back, width_pct=26, active=True
         )
         self.play_btn, self.play_lbl = U.make_tab_btn(
@@ -161,13 +161,36 @@ class Animator(Activity):
         except Exception:
             pass
         stage.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        try:
+            stage.remove_flag(lv.obj.FLAG.CLICKABLE)
+            stage.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
+        except Exception:
+            pass
 
         def _mk_line():
             ln = lv.line(stage)
             ln.set_style_line_width(3, 0)
             ln.set_style_line_color(lv.color_hex(_FIGURE), 0)
             ln.set_style_line_rounded(True, 0)
+            try:
+                ln.remove_flag(lv.obj.FLAG.CLICKABLE)
+            except Exception:
+                pass
             return ln
+
+        def _decor_obj(size, radius, color):
+            o = lv.obj(stage)
+            o.set_size(size, size)
+            o.set_style_radius(radius, 0)
+            o.set_style_bg_color(lv.color_hex(color), 0)
+            o.set_style_border_width(0, 0)
+            try:
+                o.remove_flag(lv.obj.FLAG.CLICKABLE)
+                o.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
+                o.remove_flag(lv.obj.FLAG.SCROLLABLE)
+            except Exception:
+                pass
+            return o
 
         # Torso: two diagonals forming a shoulder–waist quad silhouette
         self.torso_l = _mk_line()
@@ -175,11 +198,7 @@ class Animator(Activity):
         self.torso_top = _mk_line()
         self.torso_bot = _mk_line()
 
-        self.head_obj = lv.obj(stage)
-        self.head_obj.set_size(18, 18)
-        self.head_obj.set_style_radius(9, 0)
-        self.head_obj.set_style_bg_color(lv.color_hex(_FIGURE), 0)
-        self.head_obj.set_style_border_width(0, 0)
+        self.head_obj = _decor_obj(18, 9, _FIGURE)
 
         # Two-bone arms
         self.arm_ru = _mk_line()
@@ -187,17 +206,8 @@ class Animator(Activity):
         self.arm_lu = _mk_line()
         self.arm_ll = _mk_line()
 
-        self.hand_r = lv.obj(stage)
-        self.hand_r.set_size(10, 10)
-        self.hand_r.set_style_radius(5, 0)
-        self.hand_r.set_style_bg_color(lv.color_hex(_HAND), 0)
-        self.hand_r.set_style_border_width(0, 0)
-
-        self.hand_l = lv.obj(stage)
-        self.hand_l.set_size(10, 10)
-        self.hand_l.set_style_radius(5, 0)
-        self.hand_l.set_style_bg_color(lv.color_hex(_HAND), 0)
-        self.hand_l.set_style_border_width(0, 0)
+        self.hand_r = _decor_obj(10, 5, _HAND)
+        self.hand_l = _decor_obj(10, 5, _HAND)
 
         self.stage = stage
         self._content = content
@@ -206,6 +216,8 @@ class Animator(Activity):
         self._tip = tip
 
         self.setContentView(screen)
+        # Animator special case: start focus on Back for quick exit.
+        U.focus_widget(back_btn)
 
     def onResume(self, screen):
         super().onResume(screen)
@@ -267,6 +279,11 @@ class Animator(Activity):
             b.set_style_bg_color(lv.color_hex(color), 0)
             b.set_style_border_width(0, 0)
             b.remove_flag(lv.obj.FLAG.SCROLLABLE)
+            try:
+                b.remove_flag(lv.obj.FLAG.CLICKABLE)
+                b.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
+            except Exception:
+                pass
             self.ball_objs.append(b)
 
     def _start_timer(self):
