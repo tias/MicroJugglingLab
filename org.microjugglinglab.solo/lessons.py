@@ -370,20 +370,6 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "5551",
-                    "fr": "5551",
-                    "en": "5551",
-                },
-                "pattern": "5551",
-                "bps": 4.6,
-                "tip": {
-                    "nl": "Vier worpen en een hold - brug naar de cascade.",
-                    "fr": "Quatre lancers puis un hold - pont vers la cascade.",
-                    "en": "Four throws then a hold - bridge to the cascade.",
-                },
-            },
-            {
-                "name": {
                     "nl": "5-cascade",
                     "fr": "Cascade a 5",
                     "en": "5-Cascade",
