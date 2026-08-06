@@ -401,6 +401,7 @@ class JuggleEngine:
         self.num_balls = max(1, average_balls(self.beats, self.is_sync))
         self.flights = []
         self.hand_segs = {RIGHT: [], LEFT: []}
+        self._flights_by_ball = []
         self.loop_ms = self.beat_ms
         self.warmup_ms = 0.0
         self.playback_rate = 1.0
@@ -515,17 +516,32 @@ class JuggleEngine:
         """Time between consecutive sync pairs (JL: 2 half-beat units)."""
         return 2.0 * self.beat_ms if self.is_sync else self.beat_ms
 
+    def _schedule_cycles(self):
+        """Minimal pattern cycles to cover warmup + loop search (badge CPU/RAM)."""
+        period = max(1, len(self.beats))
+        balls = max(1, average_balls(self.beats, self.is_sync))
+        max_h = max(1, _max_throw_height(self.beats, self.is_sync))
+        # Beats/pairs needed: throw land + warmup + longest loop candidate + margin.
+        loop_n = max(2 * balls * period, 4 * period, 24)
+        need_steps = max_h + balls * period + loop_n + 2 * period + 2
+        cycles = (need_steps + period - 1) // period
+        if cycles < 4:
+            cycles = 4
+        if cycles > 20:
+            cycles = 20
+        return cycles
+
     def _build_schedule(self):
         period = len(self.beats)
         if period == 0:
             self.flights = []
             self.hand_segs = {RIGHT: [], LEFT: []}
+            self._flights_by_ball = []
             self.loop_ms = self.beat_ms
             self.warmup_ms = 0.0
             return
 
-        # Cap cycles so long periods stay within badge RAM (each flight is heavy).
-        cycles = max(48, min(16 * period, 96))
+        cycles = self._schedule_cycles()
         flights = self._resimulate(cycles)
         self._apply_squeeze(flights)
         self._attach_paths(flights)
@@ -535,7 +551,42 @@ class JuggleEngine:
             self.num_balls = max(ids) + 1
         else:
             self.num_balls = max(1, average_balls(self.beats, self.is_sync))
+        self._index_flights()
         self._measure_seamless_loop()
+        self._prune_to_loop()
+        try:
+            import gc
+
+            gc.collect()
+        except ImportError:
+            pass
+
+    def _index_flights(self):
+        """Per-ball flight lists sorted by t0 — avoids O(flights) scans every frame."""
+        by = [[] for _ in range(self.num_balls)]
+        for f in self.flights:
+            b = f["ball"]
+            if 0 <= b < self.num_balls:
+                by[b].append(f)
+        for lst in by:
+            lst.sort(key=lambda f: f["t0"])
+        self._flights_by_ball = by
+
+    def _prune_to_loop(self):
+        """Drop schedule outside the playback window to cut RAM and frame cost."""
+        t0 = self.warmup_ms - 0.5
+        t1 = self.warmup_ms + self.loop_ms + 0.5
+        self.flights = [
+            f
+            for f in self.flights
+            if f["hold_until"] >= t0 and f["t0"] <= t1
+        ]
+        for h in (RIGHT, LEFT):
+            segs = self.hand_segs.get(h) or []
+            self.hand_segs[h] = [
+                s for s in segs if s["t1"] >= t0 and s["t0"] <= t1
+            ]
+        self._index_flights()
 
     def _apply_squeeze(self, flights):
         """JL squeezebeats: stagger N>1 airborne catches on the same hand/beat."""
@@ -557,6 +608,25 @@ class JuggleEngine:
             for i, f in enumerate(flist):
                 f["t1"] = f["t1"] + (i / float(n - 1)) * squeeze_ms
 
+    def _ball_flight_at(self, bid, t_loop):
+        """Rightmost flight for ball with t0 <= t_loop, or None."""
+        flist = self._flights_by_ball[bid] if bid < len(self._flights_by_ball) else None
+        if not flist:
+            return None
+        lo = 0
+        hi = len(flist) - 1
+        best = -1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if flist[mid]["t0"] <= t_loop:
+                best = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        if best < 0:
+            return None
+        return flist[best]
+
     def _balls_cm_at(self, t_loop, hands_cm=None):
         """Labeled ball positions in cm at absolute schedule time t_loop."""
         if hands_cm is None:
@@ -565,32 +635,17 @@ class JuggleEngine:
                 LEFT: self._hand_xz(LEFT, t_loop),
             }
         balls = {}
-        for f in self.flights:
-            b = f["ball"]
-            t0, t1 = f["t0"], f["t1"]
-            hold_until = f["hold_until"]
-            if t_loop < t0:
-                continue
-            if t0 <= t_loop <= t1:
-                t = (t_loop - t0) / 1000.0
-                balls[b] = _toss_pos(f["toss"], t)
-            elif t1 < t_loop <= hold_until:
-                balls[b] = hands_cm[f["hand1"]]
         for bid in range(self.num_balls):
-            if bid in balls:
-                continue
-            best = None
-            for f in self.flights:
-                if f["ball"] != bid:
-                    continue
-                if f["t1"] <= t_loop:
-                    if best is None or f["t1"] > best["t1"]:
-                        best = f
-            if best is not None:
-                balls[bid] = hands_cm[best["hand1"]]
-            else:
+            f = self._ball_flight_at(bid, t_loop)
+            if f is None:
                 h = RIGHT if (bid % 2 == 0) else LEFT
                 balls[bid] = hands_cm[h]
+                continue
+            if t_loop <= f["t1"]:
+                balls[bid] = _toss_pos(f["toss"], (t_loop - f["t0"]) / 1000.0)
+            else:
+                # In hold, or past hold until the next throw — stay on catch hand.
+                balls[bid] = hands_cm[f["hand1"]]
         return balls
 
     def _state_key(self, t_loop):
@@ -608,12 +663,34 @@ class JuggleEngine:
         return hk + bk
 
     def _all_balls_present(self, t_loop):
-        balls = {}
-        for f in self.flights:
-            b = f["ball"]
-            if f["t0"] <= t_loop <= f["hold_until"]:
-                balls[b] = True
-        return len(balls) >= self.num_balls
+        n = 0
+        for bid in range(self.num_balls):
+            f = self._ball_flight_at(bid, t_loop)
+            if f is not None and f["t0"] <= t_loop <= f["hold_until"]:
+                n += 1
+        return n >= self.num_balls
+
+    def _seg_at(self, hand, t_ms):
+        """Hand Hermite segment covering t_ms, or None (binary search)."""
+        segs = self.hand_segs.get(hand) or []
+        if not segs:
+            return None
+        lo = 0
+        hi = len(segs) - 1
+        best = -1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if segs[mid]["t0"] <= t_ms:
+                best = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        if best < 0:
+            return None
+        s = segs[best]
+        if t_ms <= s["t1"]:
+            return s
+        return None
 
     def _hands_ready(self, t_loop):
         """True if every hand that has motion is on a Hermite seg (not pre-seg rest)."""
@@ -621,7 +698,7 @@ class JuggleEngine:
             segs = self.hand_segs.get(h) or []
             if not segs:
                 continue  # never moves — resting is correct
-            if not any(s["t0"] <= t_loop <= s["t1"] for s in segs):
+            if self._seg_at(h, t_loop) is None:
                 return False
         return True
 
@@ -649,12 +726,13 @@ class JuggleEngine:
         warmup = 0.0
         found_warm = False
         probe = 0.0
+        probe_step = step * 0.5
         while probe <= max_t:
             if self._steady_at(probe):
                 warmup = probe
                 found_warm = True
                 break
-            probe += step * 0.25
+            probe += probe_step
         if not found_warm:
             warmup = step * float(max(1, self.num_balls))
 
@@ -663,13 +741,14 @@ class JuggleEngine:
         margin = step * float(2 * period + 2)
         loop_ms = step * float(period)
         found = False
-        for n in range(period, max_n + 1):
+        # Labeled orbit length is a multiple of the siteswap period.
+        for n in range(period, max_n + 1, period):
             cand = step * float(n)
             if warmup + cand + margin > max_t:
                 break
             # Must match at the wrap point itself (d=0), not only mid-loop probes.
             ok = True
-            for frac in (0.0, 0.15, 0.35, 0.55, 0.75, 0.92):
+            for frac in (0.0, 0.25, 0.5, 0.75):
                 tl = warmup + frac * cand
                 if not self._steady_at(tl) or not self._steady_at(tl + cand):
                     ok = False
@@ -891,18 +970,17 @@ class JuggleEngine:
         self.hand_segs = segs
 
     def _hand_xz(self, hand, t_ms):
-        segs = self.hand_segs.get(hand) or []
-        for s in segs:
-            if s["t0"] <= t_ms <= s["t1"]:
-                t = (t_ms - s["t0"]) / 1000.0
-                x = _eval_cubic(s["cx"], t)
-                z = _eval_cubic(s["cz"], t)
-                if z < _HAND_Z_MIN:
-                    z = _HAND_Z_MIN
-                elif z > _HAND_Z_MAX:
-                    z = _HAND_Z_MAX
-                return (x, z)
-        return resting_xz(hand)
+        s = self._seg_at(hand, t_ms)
+        if s is None:
+            return resting_xz(hand)
+        t = (t_ms - s["t0"]) / 1000.0
+        x = _eval_cubic(s["cx"], t)
+        z = _eval_cubic(s["cz"], t)
+        if z < _HAND_Z_MIN:
+            z = _HAND_Z_MIN
+        elif z > _HAND_Z_MAX:
+            z = _HAND_Z_MAX
+        return (x, z)
 
     def state_at(self, t_ms=None):
         if t_ms is None:
