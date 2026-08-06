@@ -64,7 +64,7 @@ SECTIONS = [
                 "pattern": "[32]3322",
                 "bps": 3.0,
                 "tip": {
-                    "nl": "Begin met een multiplex, dan drie cascade-worpen.",
+                    "nl": "Begin met een meervoudsworp, dan drie cascade-worpen.",
                     "fr": "Commence par un multiplex, puis trois lancers en cascade.",
                     "en": "Start with a multiplex, then three cascade throws.",
                 },
@@ -103,14 +103,14 @@ SECTIONS = [
         "id": "ball3_tricks",
         "title_key": "section_ball3_tricks",
         "title": {
-            "nl": "3-bal tricks",
+            "nl": "3-bal trucs",
             "fr": "Tours a 3 balles",
             "en": "3-Ball Tricks",
         },
         "lessons": [
             {
                 "name": {
-                    "nl": "3-bal flash",
+                    "nl": "3-bal flits",
                     "fr": "Flash a 3 balles",
                     "en": "3-ball Flash",
                 },
@@ -124,7 +124,7 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "1Up-2Up A (kolommen)",
+                    "nl": "1hoog-2hoog A (kolommen)",
                     "fr": "1Up-2Up A (colonnes)",
                     "en": "1Up-2Up A (Columns)",
                 },
@@ -138,7 +138,7 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "1Up-2Up B",
+                    "nl": "1hoog-2hoog B",
                     "fr": "1Up-2Up B",
                     "en": "1Up-2Up B",
                 },
@@ -152,28 +152,28 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "1Up-2Up C",
+                    "nl": "1hoog-2hoog C",
                     "fr": "1Up-2Up C",
                     "en": "1Up-2Up C",
                 },
                 "pattern": "(4,4)(4x,0)(4,4)(0,4)(4,4)(0,4x)(4,4)(4,0)",
                 "bps": 4.3,
                 "tip": {
-                    "nl": "Langere 1Up-2Up-cyclus met afwisselende kanten.",
+                    "nl": "Langere 1hoog-2hoog-cyclus met afwisselende kanten.",
                     "fr": "Cycle 1Up-2Up plus long, cotes alternes.",
                     "en": "Longer 1Up-2Up cycle, alternating sides.",
                 },
             },
             {
                 "name": {
-                    "nl": "The Box",
+                    "nl": "De doos",
                     "fr": "The Box",
                     "en": "The Box",
                 },
                 "pattern": "(2x,4)(4,2x)",
                 "bps": 4.5,
                 "tip": {
-                    "nl": "Afwisselend kruisende 2 en rechte 4 - de box.",
+                    "nl": "Afwisselend kruisende 2 en rechte 4 - de doos.",
                     "fr": "Alternance de 2 croises et 4 droits - la box.",
                     "en": "Alternating crossing 2s and straight 4s - the box.",
                 },
@@ -194,14 +194,14 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "Boston shuffle",
+                    "nl": "Boston-schuif",
                     "fr": "Boston shuffle",
                     "en": "Boston Shuffle",
                 },
                 "pattern": "(2x,4x)(4x,2)(4x,2x)(2,4x)",
                 "bps": 5.0,
                 "tip": {
-                    "nl": "Shuffle-siteswap naar beide kanten (zonder slam-gebaar).",
+                    "nl": "Schuifpatroon naar beide kanten (zonder hard neerslaan).",
                     "fr": "Siteswap shuffle des deux cotes (sans geste slam).",
                     "en": "Shuffle siteswap to both sides (no slam gesture).",
                 },
@@ -254,7 +254,7 @@ SECTIONS = [
                 "pattern": "4",
                 "bps": 3.8,
                 "tip": {
-                    "nl": "Async fontein: even worpen, kolommen in dezelfde hand.",
+                    "nl": "Asynchrone fontein: even worpen, kolommen in dezelfde hand.",
                     "fr": "Fontaine async: lancers pairs, colonnes dans la meme main.",
                     "en": "Async fountain: even throws, same-hand columns.",
                 },
@@ -279,7 +279,7 @@ SECTIONS = [
                 "pattern": "50500",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Hoge worpen met pauzes - leer de 5-timing.",
+                    "nl": "Hoge worpen met pauzes - leer het 5-ritme.",
                     "fr": "Lancers hauts avec pauses - apprends le rythme du 5.",
                     "en": "High throws with pauses - learn the 5 timing.",
                 },
@@ -300,28 +300,28 @@ SECTIONS = [
             },
             {
                 "name": {
-                    "nl": "Chase",
+                    "nl": "Achtervolging",
                     "fr": "Chase",
                     "en": "Chase",
                 },
                 "pattern": "50505",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Afwisselend 5-worpen en holds.",
+                    "nl": "Afwisselend 5-worpen en vasthouden.",
                     "fr": "Alternance de 5 et de holds.",
                     "en": "Alternating 5s and holds.",
                 },
             },
             {
                 "name": {
-                    "nl": "Flash",
+                    "nl": "Flits",
                     "fr": "Flash",
                     "en": "Flash",
                 },
                 "pattern": "55500",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Drie hoge worpen, dan twee lege beats.",
+                    "nl": "Drie hoge worpen, dan twee lege tellen.",
                     "fr": "Trois lancers hauts, puis deux temps vides.",
                     "en": "Three high throws, then two empty beats.",
                 },
@@ -335,7 +335,7 @@ SECTIONS = [
                 "pattern": "[52][52]55022[22][22]",
                 "bps": 2.5,
                 "tip": {
-                    "nl": "Vier props richting een 5-cascade (vereenvoudigd).",
+                    "nl": "Vier ballen richting een 5-cascade (vereenvoudigd).",
                     "fr": "Quatre objets vers une cascade a 5 (simplifie).",
                     "en": "Four props toward a 5-cascade (simplified).",
                 },
@@ -349,7 +349,7 @@ SECTIONS = [
                 "pattern": "55550",
                 "bps": 4.6,
                 "tip": {
-                    "nl": "Bijna klaar - vier ballen in 5-cascade-slots.",
+                    "nl": "Bijna klaar - vier ballen in 5-cascade-plekken.",
                     "fr": "Presque - quatre balles dans les creneaux du 5.",
                     "en": "Almost there - four balls in 5-cascade slots.",
                 },

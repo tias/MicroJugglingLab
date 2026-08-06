@@ -22,7 +22,7 @@ _current = None
 
 STRINGS = {
     "app_title": {
-        "nl": "Juggling",
+        "nl": "Jongleren",
         "fr": "Juggling",
         "en": "Juggling",
     },
@@ -37,7 +37,7 @@ STRINGS = {
         "en": "3-Cascade Step By Step",
     },
     "section_ball3_tricks": {
-        "nl": "3-bal tricks",
+        "nl": "3-bal trucs",
         "fr": "Tours a 3 balles",
         "en": "3-Ball Tricks",
     },
